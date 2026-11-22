@@ -106,6 +106,7 @@ input.addEventListener('change',function(){choose(input.files&&input.files[0]);}
 select.addEventListener('drop',function(e){if(!busy&&e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0]){input.value='';choose(e.dataTransfer.files[0]);}});
 cancel.addEventListener('click',function(){stopped=true;say('Отменяем обработку…');});
 function delay(){return new Promise(function(resolve){setTimeout(resolve,0);});}
+function readArrayBuffer(file){if(typeof file.arrayBuffer==='function')return file.arrayBuffer();return new Promise(function(resolve,reject){var reader=new FileReader();reader.onload=function(){resolve(reader.result);};reader.onerror=function(){reject(reader.error||new Error('Не удалось прочитать файл.'));};reader.readAsArrayBuffer(file);});}
 function decode(context,buffer){return new Promise(function(resolve,reject){try{context.decodeAudioData(buffer,resolve,reject);}catch(e){reject(e);}});}
 function int16(sample){return sample<-1?-32768:sample>1?32767:sample<0?Math.round(sample*32768):Math.round(sample*32767);}
 function outName(name){var base=name.replace(/\.[^.]+$/,'').replace(/[\\/:*?"<>|]+/g,'_').trim();return (base||'audio')+'.mp3';}
@@ -118,7 +119,7 @@ convert.addEventListener('click',async function(){
    var AudioCtx=window.AudioContext||window.webkitAudioContext;
    if(!AudioCtx)throw new Error('Этот браузер не поддерживает обработку аудио.');
    say('Читаем аудиофайл…');
-   var bytes=await file.arrayBuffer();
+   var bytes=await readArrayBuffer(file);
    if(stopped)throw new Error('Отменено.');
    context=new AudioCtx();
    progress.value=10;say('Декодируем аудио…');
