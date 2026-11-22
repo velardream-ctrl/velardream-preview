@@ -95,6 +95,7 @@ function choose(file){
  clearResult();selected=file||null;progress.hidden=true;progress.value=0;
  if(!selected){info.textContent='Файл пока не выбран.';say('Ожидание файла.');convert.disabled=true;return;}
  info.textContent=selected.name+' · '+readable(selected.size);
+ if(/\.flac$/i.test(selected.name)){var high=document.querySelector('input[name="bitrate"][value="320"]');if(high)high.checked=true;}
  if(!selected.size){selected=null;say('Файл пустой. Выберите другой.');}
  else if(selected.size>120*1024*1024){selected=null;say('Файл больше 120 МБ. Для обработки очень больших записей понадобится компьютерный конвертер.');}
  else say(selected.size>30*1024*1024?'Файл крупный. На старых телефонах и планшетах может не хватить памяти.':'Файл готов к конвертации.');
