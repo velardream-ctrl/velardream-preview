@@ -22,3 +22,15 @@
 
 ## Журнал
 См. [STAGING_LOG_RU.md](STAGING_LOG_RU.md).
+
+## RUN-213: проверка MP3-конвертера из тестовой ветки
+
+Исходная страница находится в `test/mp3-converter-20261122` → `mp3-converter/index.html`; код уже есть в GitHub, но без включённого GitHub Pages публичный URL даёт ошибку 404.
+
+**Однократное включение GitHub Pages владельцем репозитория:**
+1. Открыть `https://github.com/velardream-ctrl/velardream-preview/settings/pages`.
+2. В `Build and deployment → Source` выбрать **Deploy from a branch**.
+3. В `Branch` выбрать **test/mp3-converter-20261122**, каталог **/(root)** и нажать **Save**.
+4. Проверить публикацию во вкладке Actions / Pages и затем открыть `https://velardream-ctrl.github.io/velardream-preview/mp3-converter/`.
+
+Этот способ не использует workflow GitHub Actions, поскольку при публикации непосредственно из ветки GitHub Pages сам запускает стандартную сборку. Рабочий репозиторий `velar-music-manager`, домен `velardream.com`, Firebase и доступ к Studio не изменяются. Важно: открытие URL не равно проверке конвертации — отдельно проверить WAV/M4A → MP3 на iPhone Safari и старом iPad.
