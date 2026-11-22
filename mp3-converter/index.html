@@ -218,6 +218,9 @@ convert.addEventListener('click',async function(){
    }
    bytes=null;
    if(stopped)throw new Error('Отменено.');
+   // Reject oversized/unsupported decoded input BEFORE allocating new resampling buffers.
+   if(audio.numberOfChannels<1||audio.numberOfChannels>2)throw new Error('Поддерживается только моно и стерео.');
+   if(audio.duration>45*60)throw new Error('Продолжительность больше 45 минут. Разделите запись на части или используйте компьютер.');
    audio=await resampleAudio(audio);
    if(stopped)throw new Error('Отменено.');
    var rate=audio.sampleRate, channels=audio.numberOfChannels;
