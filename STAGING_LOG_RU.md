@@ -58,3 +58,9 @@
 - Принцип приватности: исходное аудио обрабатывается в браузере, не отправляется на backend/Firebase/Drive; библиотека загружается с jsDelivr при первом посещении.
 - Добавлена ссылка в `index.html` preview. Production `velardream.com` и Firebase не менялись.
 - Статус: код размещён в GitHub preview; реальная публикация GitHub Pages и работа на iPhone Safari/старом iPad ещё не подтверждены. Перед production нужны проверка WAV/M4A и регрессий, отдельный PR и одобрение.
+
+## 2026-11-22 — тестовая ветка MP3-конвертера
+- Создана отдельная ветка test/mp3-converter-20261122 внутри **существующего** репозитория velardream-ctrl/velardream-preview. Рабочий velardream.com, production GitHub и Firebase не менялись.
+- Ветка содержит отдельную страницу mp3-converter/index.html, наследованный файл mp3-converter.html и ссылку с тестовой главной.
+- Добавлен workflow .github/workflows/mp3-preview-pages.yml для публикации только тестового репозитория из данной ветки; GitHub Pages требует включённых Actions и разрешений репозитория. Настройка и успешность публикации с реального адреса ещё не подтверждены.
+- Ручная проверка WAV/M4A, работы MP3-кодировщика и скачивания на iPhone/старом iPad остаётся обязательной; заявлять выпуск в production нельзя.
