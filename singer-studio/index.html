@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="color-scheme" content="dark"><meta name="robots" content="noindex,nofollow">
-<title>Мастерская певца · Velar Dream Records</title>
+<title>Мастерская артиста · Velar Dream Records</title>
 <style>
 *{box-sizing:border-box}
 :root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color-scheme:dark}
@@ -42,6 +42,10 @@ progress{width:100%;height:13px;accent-color:#e6c56b}
 .listening{margin-top:12px;border-top:1px solid #405474;padding-top:16px}
 .karaoke{opacity:.92;border-style:dashed}
 .karaoke p{color:#c7d4e7;line-height:1.55}
+.preset-row{display:flex;flex-wrap:wrap;align-items:center;gap:9px;padding:11px 0;border-bottom:1px solid #405474}
+.preset-row span{flex:1 1 190px;overflow-wrap:anywhere}
+.preset-row button{min-height:38px;font-size:.85rem;padding:8px 12px}
+#project-name{width:100%;min-height:46px;border:1px solid #61779e;border-radius:11px;background:#0a1934;color:#f6f3ec;padding:11px 14px;font:inherit}
 footer{color:#aabbd4;font-size:.82rem;line-height:1.6;padding:15px 4px}
 [hidden]{display:none!important}
 @media(max-width:530px){.actions button,.actions .save{flex:1 1 43%;min-width:130px}}
@@ -50,8 +54,8 @@ footer{color:#aabbd4;font-size:.82rem;line-height:1.6;padding:15px 4px}
 <body><main>
 <header><a class="brand" href="../">VELAR DREAM RECORDS</a><nav><a href="../">Тестовая площадка</a><a href="../mp3-converter/">Аудиоконвертер</a></nav></header>
 <p class="eyebrow">VELAR DREAM · CREATIVE LAB · TEST</p>
-<h1>Мастерская певца</h1>
-<p class="lead">Подготовьте минусовку к своему голосу: выберите файл, измените тональность и темп независимо друг от друга, прослушайте результат и сохраните его в нужном аудиоформате. Всё происходит в браузере.</p>
+<h1>Мастерская артиста</h1>
+<p class="lead">Личный творческий кабинет певца: подготовьте минусовку к своему голосу: выберите файл, измените тональность и темп независимо друг от друга, прослушайте результат и сохраните его в нужном аудиоформате. Всё происходит в браузере.</p>
 <section class="panel" aria-labelledby="source-heading">
 <h2 id="source-heading">1. Загрузите фонограмму</h2>
 <label class="drop" id="drop"><strong>♫ Выбрать песню или минусовку</strong>
@@ -95,9 +99,19 @@ footer{color:#aabbd4;font-size:.82rem;line-height:1.6;padding:15px 4px}
 <div class="actions"><button type="button" id="save" disabled>Создать файл для скачивания</button><a id="download" class="save" href="#" download hidden>Скачать результат</a></div>
 </div>
 </section>
+<section class="panel" aria-labelledby="projects-heading">
+<h2 id="projects-heading">Личный кабинет артиста</h2>
+<p class="hint">Пока это локальная мастерская без регистрации. Можно сохранять название проекта, тональность и темп для последующих репетиций. Аудиофайлы, личные данные и история прослушиваний не сохраняются на сервере.</p>
+<label for="project-name">Название проекта или песни</label>
+<input id="project-name" type="text" maxlength="70" placeholder="Например: Joulun valo — моя тональность" autocomplete="off">
+<div class="actions"><button id="save-preset" type="button" class="secondary">Сохранить настройки</button></div>
+<h3>Мои проекты на этом устройстве</h3>
+<div id="presets" aria-live="polite"></div>
+<p class="hint">Чтобы повторить обработку, выберите файл заново. Очистка данных браузера удалит сохранённые настройки. Облачные кабинеты и синхронизация — следующий отдельный этап.</p>
+</section>
 <section class="panel karaoke" aria-labelledby="future-heading">
 <h2 id="future-heading">В будущем — создание минусовки из песни</h2>
-<p>Планируется AI-разделение записи на вокал и инструментальную часть. Можно будет скачать чистый вокал и отдельную минусовку, затем изменить её тональность и темп. Сейчас функция удаления вокала ещё не подключена.</p>
+<p>В следующей версии планируется AI-разделение записи на вокал и инструментальное сопровождение: отдельно вокал и минусовка, а затем изменение тональности и темпа. Сейчас удаления вокала нет — обещать чистое разделение любой песни было бы неправильно.</p>
 </section>
 <footer>
 Тестовый инструмент для музыки, которую вы имеете право использовать. Исходная запись не отправляется на сервер. На старых iPad и телефонах обработка длинных треков может быть недоступна. Алгоритм изменения высоты и темпа: <a href="https://github.com/cutterbl/SoundTouchJS">SoundTouchJS (LGPL-2.1)</a>; при сильных изменениях возможны звуковые артефакты. FLAC и WAV сохраняются локально; для MP3 нужен загружаемый кодировщик lamejs.
