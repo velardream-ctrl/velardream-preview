@@ -16,6 +16,11 @@ mandatoryIds.forEach(id=>assert.ok(page.includes('id="'+id+'"'),id));
 assert.match(page,/<h1>Мастерская артиста<\/h1>/);
 assert.match(preview,/href="singer-studio\/"/);
 assert.match(page,/type="module" src="studio.js\?v=217"/);
+for(const value of ['mp3192','mp3320','wav16','wav24','flac16','flac24'])
+  assert.ok(page.includes('<option value="'+value+'"'),value);
+assert.match(js,/option==='wav24'/);
+assert.match(js,/option==='flac24'/);
+assert.match(js,/option==='mp3192'/);
 assert.match(page,/AI-разделение/);
 assert.match(page,/нет — обещать чистое разделение/);
 assert.match(js,/import \{ SoundTouch, SimpleFilter \}/);
