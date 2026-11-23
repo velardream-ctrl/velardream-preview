@@ -37,4 +37,27 @@ result=tool.prepare({songs:[{id:'X',title:'Same',lyrics:'Text'}]},
 assert.equal(result.rows[0].status,'review');
 assert.equal(result.rows[0].reason,'Несколько песен с таким названием в каталоге');
 assert.equal(tool.prepare({songs:[{id:'E',title:'Joulun valo',metadata:{prompt:'Line one'}}]},catalog,[]).counts.matched,1);
+// RUN-222: style prompts belong to individual musical variants, not to a
+// deduplicated lyric string. All known variant styles survive in the review JSON.
+const withStyles={
+  songs:[{
+    id:'S-A',title:'Ты мой плюшевый мишка',artist:'Velar',
+    lyrics:'[Verse 1]\nСлова песни\n[Chorus: layered male vocals]\nПрипев',
+    style_of_music:'Deep baritone, mellow pop, 110 BPM',
+    duplicates:[
+      {id:'S-B',title:'Ты мой плюшевый мишка v2',style_of_music:'Jazz swing, saxophone'},
+      {id:'S-C',title:'Ты мой плюшевый мишка remaster',metadata:{tags:'Melodic trance, female choir'}}
+    ]
+  }]
+};
+const styled=tool.prepare(withStyles,[{title:'Ты мой плюшевый мишка',artist:'Velar',id:'T-1'}],[]);
+assert.equal(styled.rows[0].status,'matched');
+assert.equal(styled.rows[0].sunoStyle,'Deep baritone, mellow pop, 110 BPM');
+assert.match(styled.rows[0].sunoCues,/Chorus: layered male vocals/);
+assert.equal(styled.rows[0].sunoVersions.length,3);
+assert.equal(styled.rows[0].sunoVersions[1].sunoStyle,'Jazz swing, saxophone');
+assert.equal(styled.rows[0].sunoVersions[2].sunoStyle,'Melodic trance, female choir');
+assert.equal(tool.sunoStyle({metadata:{prompt:'Lyrics are not a style'}}),'');
+assert.equal(tool.sunoStyle({styleOfMusic:'indie pop'}),'indie pop');
+assert.ok(!tool.styleCues({lyrics:'[Verse 1]\n[Chorus]\nActual lyrics'}));
 console.log('RUN-220 — test of Suno lyric preparation and duplicate protection: PASS');

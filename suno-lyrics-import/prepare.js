@@ -18,6 +18,43 @@ function lyricsOf(item){
  // require a reviewed adapter instead of guessing and mixing prompts with actual lyrics.
  return str(item?.lyrics)||str(item?.song_lyrics)||str(item?.text)||str(m.lyrics)||str(m.prompt)||'';
 }
+// Explicit export fields for Suno "Style of Music". Do not confuse Lyrics with
+// metadata.prompt, which can contain the text of the song.
+function sunoStyle(item){
+ const m=item?.metadata||{};
+ const options=[item?.sunoStyle,item?.style_of_music,item?.styleOfMusic,
+   item?.music_style,item?.style,m?.style_of_music,m?.style,m?.tags];
+ for(const v of options){
+   if(typeof v==='string'&&v.trim())return v.trim();
+   if(Array.isArray(v)&&v.every(x=>typeof x==='string')&&v.length)
+     return v.map(x=>x.trim()).filter(Boolean).join(', ');
+ }
+ return '';
+}
+function styleCues(item){
+ const direct=str(item?.sunoCues)||str(item?.style_cues)||str(item?.styles_in_lyrics);
+ if(direct)return direct;
+ // The source lyrics are kept intact; commands are extracted as supplementary
+ // metadata for review, not deleted from lyrics.
+ return lyricsOf(item).replace(/\r\n?/g,'\n').split('\n').map(x=>x.trim())
+  .filter(x=>/^\[[^\]]{1,240}\]$/.test(x)&&
+    !/^\[(?:verse|chorus|bridge|intro|outro|pre-chorus|post-chorus|instrumental)\s*\d*\]$/i.test(x)).join('\n');
+}
+function associatedStyles(item,index){
+ const main={id:sourceId(item),title:titleOf(item),url:str(item?.url)||str(item?.song_url),
+   sunoStyle:sunoStyle(item),sunoCues:styleCues(item)};
+ const extras=Array.isArray(item?.duplicates)?item.duplicates:[];
+ const seen=new Set(),res=[];
+ for(const row of [main,...extras.map(x=>({
+   id:sourceId(x),title:titleOf(x),url:str(x?.url)||str(x?.song_url),
+   sunoStyle:sunoStyle(x),sunoCues:styleCues(x)}))]){
+    const key=row.id||('item-'+index+'-'+res.length);
+    if(seen.has(key))continue;
+    seen.add(key);
+    res.push(row);
+ }
+ return res;
+}
 function sourceId(item){
  return str(item?.id)||str(item?.clip_id)||str(item?.song_id)||str(item?.uuid);
 }
@@ -36,7 +73,9 @@ function normalizeSource(item,index) {
  const language=str(item?.language)||str(item?.metadata?.language)||'Не указан';
  const version='Suno'+(sourceIdValue?' · '+sourceIdValue.slice(0,80):' · запись '+(index+1));
  return {status:'ready',title:title,artist:artistOf(item),sourceId:sourceIdValue,
-  language:language,version:version,text:body.replace(/\r\n?/g,'\n'),sourceUrl:/^https:\/\/suno\.com\//.test(url)?url:'',
+  language:language,version:version,text:body.replace(/\r\n?/g,'\n'),
+  sunoStyle:sunoStyle(item),sunoCues:styleCues(item),
+  sunoVersions:associatedStyles(item,index),sourceUrl:/^https:\/\/suno\.com\//.test(url)?url:'',
   sourceIndex:index};
 }
 function normalizeCatalog(song){
@@ -82,7 +121,7 @@ function prepare(source,site,existing) {
   warning:'Только проект сверки. Нельзя загружать напрямую в studio/import.js или Firestore без проверки администратором.',
   counts:counts,rows:rows};
 }
-const api={entries,normalizeSource,prepare,canon};
+const api={entries,normalizeSource,prepare,canon,sunoStyle,styleCues,associatedStyles};
 if(typeof module!=='undefined'&&module.exports)module.exports=api;
 global.VELAR_SUNO_LYRICS_PREPARE=api;
 })(typeof window!=='undefined'?window:globalThis);

@@ -25,13 +25,13 @@ table{border-collapse:collapse;width:100%;font-size:.85rem}th,td{text-align:left
 <body><main>
 <header><a href="../">VELAR DREAM RECORDS</a><a href="https://suno.com/mcp">Официальный Suno MCP</a></header>
 <p style="color:#e8cb8e;font-size:.75rem;letter-spacing:.12em">ТЕСТОВЫЙ ИНСТРУМЕНТ · RUN-220</p>
-<h1>Тексты из Suno — массовая подготовка</h1>
+<h1>Тексты и стили Suno — массовая подготовка</h1>
 <p>Перенос большого количества песен без ручного копирования. На первом этапе этот инструмент сверяет файлы экспорта и создаёт список текстов для проверки администратором Velar Dream. Он <strong>не подключается к аккаунту Suno напрямую</strong> и ничего не записывает в Firestore.</p>
 <section class="card">
 <h2>1. Выберите файлы</h2>
 <label for="suno-file">Экспорт песен Suno (JSON)</label>
 <input type="file" id="suno-file" accept=".json,application/json">
-<small>JSON, полученный через авторизованный Suno MCP/API, если в нём есть названия и тексты песен. Не загружайте cookies, пароли или токены доступа.</small>
+<small>JSON, полученный через официальный Suno MCP/API: названия, полные Lyrics и, если доступны, реальные Style of Music. Для нескольких музыкальных версий с одним текстом сохраняем отдельные стили каждой версии. Не загружайте cookies, пароли или токены доступа.</small>
 <label for="catalog-file">Каталог Velar Dream (JSON, необязательно)</label>
 <input type="file" id="catalog-file" accept=".json,application/json">
 <small>Список объектов с полями title, artist, sourceRow, upc. Если каталог не указан, все песни получат статус «Нужна сверка» — автоматической привязки не будет.</small>
@@ -44,7 +44,7 @@ table{border-collapse:collapse;width:100%;font-size:.85rem}th,td{text-align:left
 <section class="card" id="report-panel" hidden>
 <h2>2. Проверка результата</h2>
 <p id="summary"></p>
-<p class="warning">Это только предварительный пакет проверки. Ничего не изменяется в существующей базе сайта. Не импортируйте файл напрямую в Firestore: для реальной записи необходим защищённый админский загрузчик с повторной сверкой совпадений.</p>
+<p class="warning">Если Lyrics одинаковые, но версии имеют разные Style of Music, сохраняйте оба промпта в поле sunoVersions. Это только предварительный пакет проверки. Ничего не изменяется в существующей базе сайта. Не импортируйте файл напрямую в Firestore: для реальной записи необходим защищённый админский загрузчик с повторной сверкой совпадений.</p>
 <div class="preview"><table><thead><tr><th>Название</th><th>Статус</th><th>Причина</th></tr></thead><tbody id="rows"></tbody></table></div>
 <p><button type="button" id="download" disabled>Скачать JSON для проверки</button></p>
 </section>
@@ -73,7 +73,8 @@ table{border-collapse:collapse;width:100%;font-size:.85rem}th,td{text-align:left
       var files=await Promise.all([readFile($('suno-file')),readFile($('catalog-file')),readFile($('existing-file'))]);
       result=window.VELAR_SUNO_LYRICS_PREPARE.prepare(files[0],files[1],files[2]);
       var c=result.counts;
-      $('summary').textContent='Всего: '+c.total+' · найдены в каталоге: '+c.matched+' · требуют ручной сверки: '+c.review+' · пропущено дублей: '+c.skip+' · неполные: '+c.invalid;
+      var styled=result.rows.filter(function(x){return x.sunoStyle||x.sunoVersions&&x.sunoVersions.some(function(v){return !!v.sunoStyle;});}).length;
+      $('summary').textContent='Всего: '+c.total+' · найдены в каталоге: '+c.matched+' · требуют ручной сверки: '+c.review+' · пропущено дублей: '+c.skip+' · неполные: '+c.invalid+' · есть стили Suno: '+styled;
       var tbody=$('rows');tbody.textContent='';
       result.rows.slice(0,200).forEach(function(r){
         var tr=document.createElement('tr');
