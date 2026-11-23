@@ -261,7 +261,7 @@ function changeSettings(){
   if(state.rendered&&!state.working){
     const {pitch:p,tempo:t}=view();
     if(p!==state.renderPitch||t!==state.renderTempo){
-      resetOutput();tell('Настройки изменены — примените их для нового прослушивания.');
+      stopAudio();resetOutput();tell('Настройки изменены — примените их для нового прослушивания.');
     }
   }
 }
@@ -367,5 +367,23 @@ $('save-preset')?.addEventListener('click',()=>{
 });
 window.addEventListener('pagehide',()=>{
   stopAudio();['sourceUrl','renderUrl','previewUrl','exportUrl'].forEach(revokeUrl);
+});
+const PROFILE_KEY='velardream-singer-artist-name-v1';
+function profileDisplay(name){
+  const n=String(name||'').trim().slice(0,60);
+  $('artist-greeting').textContent=n?'Локальное рабочее пространство: '+n+'.':'Укажите сценическое имя, если хотите подписать своё рабочее пространство.';
+}
+try{
+  const savedName=localStorage.getItem(PROFILE_KEY)||'';
+  $('artist-name').value=savedName;profileDisplay(savedName);
+}catch(error){profileDisplay('');}
+$('save-profile').addEventListener('click',()=>{
+  const name=String($('artist-name').value||'').trim().slice(0,60);
+  try{
+    if(name)localStorage.setItem(PROFILE_KEY,name);
+    else localStorage.removeItem(PROFILE_KEY);
+    profileDisplay(name);
+    tell(name?'Профиль сохранён локально в этом браузере.':'Локальное сценическое имя очищено.');
+  }catch(error){tell('Браузер не разрешил сохранить профиль. Студия продолжит работать без него.');}
 });
 state.presets=getPresets();drawPresets();hint();
