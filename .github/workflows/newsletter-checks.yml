@@ -1,0 +1,27 @@
+name: Newsletter preview checks
+
+on:
+  push:
+    branches:
+      - feature/run219-club-newsletter-20261123
+      - test/mp3-converter-20261122
+  pull_request:
+    paths:
+      - newsletter/**
+      - club/**
+      - tests/test-newsletter.mjs
+      - .github/workflows/newsletter-checks.yml
+
+permissions:
+  contents: read
+
+jobs:
+  smoke-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Assert safe newsletter activation and preview copy
+        run: node tests/test-newsletter.mjs
