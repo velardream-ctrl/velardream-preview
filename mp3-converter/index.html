@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
 <meta name="color-scheme" content="dark">
-<title>Бесплатный MP3-конвертер · Velar Dream Records</title>
+<title>Бесплатный аудиоконвертер: MP3, WAV, FLAC · Velar Dream Records</title>
 <style>
 :root{color-scheme:dark;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}
 *{box-sizing:border-box}
@@ -30,6 +30,13 @@ legend{font-weight:650;margin-bottom:10px}
 .choices{display:flex;gap:9px;flex-wrap:wrap}
 .choices label{cursor:pointer;border:1px solid #50658b;border-radius:12px;background:#0a1932;padding:10px 15px;display:flex;gap:8px;align-items:center}
 .choices input{accent-color:#f6d48c}
+.option-select{display:block;width:100%;max-width:430px;min-height:48px;padding:12px 14px;border-radius:12px;border:1px solid #647da5;background:#0a1932;color:#f5f2ec;font:inherit}
+.option-help{margin:12px 0 5px;color:#b8c9df;font-size:.92rem;line-height:1.6}
+fieldset[hidden]{display:none!important}
+.format-tag{color:#eacc8f;font-size:.82rem;font-weight:650;letter-spacing:.07em;text-transform:uppercase}
+.info-grid{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0}
+.info-grid span{border:1px solid #435978;border-radius:10px;padding:7px 10px;color:#c3d6ed;font-size:.84rem}
+
 .actions{display:flex;gap:10px;flex-wrap:wrap}
 button,.download{font:inherit;font-weight:700;cursor:pointer;border:0;border-radius:12px;min-height:48px;padding:12px 20px;display:inline-flex;align-items:center;justify-content:center;text-decoration:none}
 button.primary,.download{color:#151c2b;background:#f4d48b}
@@ -48,17 +55,26 @@ footer{margin-top:30px;color:#a2b3d0;font-size:.88rem;line-height:1.6}
 </head>
 <body>
 <main>
-<div class="top"><a class="brand" href="../">VELAR DREAM RECORDS</a><span class="stage">ТЕСТОВАЯ ВЕТКА · RUN-213</span></div>
-<h1>Конвертер аудио в MP3</h1>
-<p class="intro">Превратите свой аудиофайл в MP3 прямо на телефоне, планшете или компьютере. Бесплатно, без регистрации и без отправки файла на сервер.</p>
+<div class="top"><a class="brand" href="../">VELAR DREAM RECORDS</a><span class="stage">ТЕСТОВАЯ ВЕРСИЯ · УНИВЕРСАЛЬНЫЙ КОНВЕРТЕР</span></div>
+<h1>Аудиоконвертер</h1>
+<p class="intro">Конвертируйте музыку и записи между MP3, WAV и FLAC прямо на телефоне, планшете или компьютере. Бесплатно, без регистрации и без загрузки аудио на сервер.</p>
 <section class="panel" aria-label="Конвертация файла">
 <label class="drop" id="drop">
-<strong>♫ Выбрать аудиофайл, включая FLAC Hi-Res</strong>
-<small>Нажмите или перетащите сюда FLAC (включая 24 бит / 96–192 кГц), WAV, M4A, AAC, MP3 и другие поддерживаемые аудиоформаты.</small>
+<strong>♫ Выбрать аудиофайл</strong>
+<small>Нажмите или перетащите файл: WAV, FLAC (в том числе Hi-Res), MP3, M4A, AAC или другой аудиоформат, который читает браузер.</small>
 <input id="file" type="file" accept="audio/*,.wav,.m4a,.aac,.aif,.aiff,.ogg,.flac,.mp4" aria-label="Выбрать аудиофайл">
 </label>
 <div id="fileinfo" class="fileinfo" aria-live="polite">Файл пока не выбран.</div>
 <fieldset>
+<legend><label for="target-format">В какой формат конвертировать?</label></legend>
+<select id="target-format" class="option-select">
+<option value="mp3" selected>MP3 — компактный файл</option>
+<option value="wav">WAV — без сжатия (PCM)</option>
+<option value="flac">FLAC — сжатие без потерь</option>
+</select>
+<p id="quality-hint" class="option-help" aria-live="polite">Выберите подходящий формат.</p>
+</fieldset>
+<fieldset id="mp3-options">
 <legend>Качество MP3</legend>
 <div class="choices">
 <label><input type="radio" name="bitrate" value="128">128 кбит/с</label>
@@ -66,203 +82,50 @@ footer{margin-top:30px;color:#a2b3d0;font-size:.88rem;line-height:1.6}
 <label><input type="radio" name="bitrate" value="320">320 кбит/с</label>
 </div>
 </fieldset>
-<div class="actions"><button id="convert" class="primary" type="button" disabled>Создать MP3</button><button id="cancel" class="secondary" type="button" disabled>Отменить</button></div>
+<fieldset id="wav-options" hidden>
+<legend>Разрядность WAV (PCM)</legend>
+<div class="choices">
+<label><input type="radio" name="wav-bits" value="16" checked>16 бит — стандарт</label>
+<label><input type="radio" name="wav-bits" value="24">24 бита — студийное качество</label>
+</div>
+</fieldset>
+<fieldset id="flac-options" hidden>
+<legend>Разрядность FLAC</legend>
+<div class="choices">
+<label><input type="radio" name="flac-bits" value="16" checked>16 бит</label>
+<label><input type="radio" name="flac-bits" value="24">24 бита</label>
+</div>
+<label for="flac-compression" class="option-help">Степень сжатия FLAC (на качество звука не влияет)</label>
+<select id="flac-compression" class="option-select">
+<option value="0">Быстрое кодирование (уровень 0)</option>
+<option value="5" selected>Сбалансированное (уровень 5)</option>
+<option value="8">Максимальное сжатие (уровень 8)</option>
+</select>
+</fieldset>
+<fieldset id="rate-options" hidden>
+<legend><label for="target-rate">Частота дискретизации WAV / FLAC</label></legend>
+<select id="target-rate" class="option-select">
+<option value="original" selected>Оставить исходную частоту (рекомендуется)</option>
+<option value="44100">44,1 кГц</option>
+<option value="48000">48 кГц</option>
+<option value="96000">96 кГц</option>
+</select>
+<p class="option-help">Увеличение частоты или разрядности не улучшает качество уже сжатой записи.</p>
+</fieldset>
+<div class="actions"><button id="convert" class="primary" type="button" disabled>Конвертировать</button><button id="cancel" class="secondary" type="button" disabled>Отменить</button></div>
 <div class="status" id="status" role="status" aria-live="polite">Ожидание файла.</div>
 <progress id="progress" value="0" max="100" aria-label="Прогресс конвертации" hidden></progress>
-<a id="download" class="download" href="#" hidden download>Скачать MP3</a>
+<a id="download" class="download" href="#" hidden download>Скачать готовый файл</a>
 </section>
 <div class="facts">
-<p><strong>Конфиденциально.</strong> Исходное аудио обрабатывается только в вашем браузере и не попадает в базу Velar Dream.</p>
-<p><strong>FLAC Hi-Res.</strong> FLAC 16/24 бит, включая 96 и 192 кГц, преобразуется в MP3 с частотой 44,1 кГц. Качество MP3 — на выбор: 128/192/320 кбит/с.</p>
-<p><strong>Совместимость.</strong> Для FLAC, который не читает браузер, используется отдельный декодер WebAssembly. Нужен интернет для первой загрузки MP3-библиотеки; на старых iPad большие Hi-Res файлы могут не поместиться в память. DRM и ссылки Spotify/YouTube не поддерживаются.</p>
+<p><strong>MP3</strong> — маленький размер для повседневного прослушивания и обмена. 128, 192 или 320 кбит/с; кодирование с потерями.</p>
+<p><strong>WAV</strong> — несжатый PCM 16 или 24 бит. Для редактирования и архива; обычно занимает больше места.</p>
+<p><strong>FLAC</strong> — сжатие без потерь, 16 или 24 бит. Подходит для хранения исходного качества, если не уменьшать разрядность и частоту.</p>
+<p><strong>Локальная обработка</strong> — файл остаётся в браузере. Для M4A/AAC и других форматов входное декодирование зависит от устройства. Старый iPad может не справиться с большими файлами. DRM и ссылки на стриминг не поддерживаются.</p>
 </div>
-<footer>Конвертируйте аудио, на которое у вас есть права. MP3 создаётся с помощью lamejs (LGPL-3.0); для FLAC при необходимости используется @wasm-audio-decoders/flac (MIT). FLAC-декодер загружается с сайта Velar Dream, MP3-кодировщик — из CDN. Аудиофайлы не отправляются на сервер. После конвертации готовый файл хранится локально до закрытия вкладки или выбора другого файла. <a href="https://github.com/zhuker/lamejs">MP3-кодировщик</a> · <a href="https://github.com/eshaz/wasm-audio-decoders">FLAC-декодер</a>.</footer>
+<footer>Конвертируйте только файлы, на которые у вас есть права. Аудио обрабатывается на устройстве; библиотеки загружаются отдельно, исходные файлы не отправляются в Firebase, на сервер или в сторонние сервисы. MP3 — <a href="https://github.com/zhuker/lamejs">lamejs (LGPL-3.0)</a>, FLAC — <a href="https://github.com/mmig/libflac.js">libflac.js (MIT)</a> и <a href="https://github.com/eshaz/wasm-audio-decoders">FLAC-декодер (MIT)</a>. Преобразование MP3 → FLAC/WAV не восстанавливает потерянное качество. Максимальный исходный файл — 120 МБ, продолжительность — 45 минут.</footer>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js"></script>
-<script>
-(function () {
-'use strict';
-var byId=function (id){return document.getElementById(id);};
-var input=byId('file'), select=byId('drop'), info=byId('fileinfo'), status=byId('status');
-var convert=byId('convert'), cancel=byId('cancel'), progress=byId('progress'), download=byId('download');
-var selected=null, busy=false, stopped=false, objectUrl=null;
-function say(message){status.textContent=message;}
-function clearResult(){if(objectUrl){URL.revokeObjectURL(objectUrl);objectUrl=null;}download.hidden=true;download.removeAttribute('href');}
-function setBusy(value){busy=value;convert.disabled=value||!selected;cancel.disabled=!value;input.disabled=value;}
-function readable(bytes){return (bytes/(1024*1024)).toFixed(1)+' МБ';}
-function choose(file){
- if(busy)return;
- clearResult();selected=file||null;progress.hidden=true;progress.value=0;
- if(!selected){info.textContent='Файл пока не выбран.';say('Ожидание файла.');convert.disabled=true;return;}
- info.textContent=selected.name+' · '+readable(selected.size);
- if(/\.flac$/i.test(selected.name)){var high=document.querySelector('input[name="bitrate"][value="320"]');if(high)high.checked=true;}
- if(!selected.size){selected=null;say('Файл пустой. Выберите другой.');}
- else if(selected.size>120*1024*1024){selected=null;say('Файл больше 120 МБ. Для обработки очень больших записей понадобится компьютерный конвертер.');}
- else say(selected.size>30*1024*1024?'Файл крупный. На старых телефонах и планшетах может не хватить памяти.':'Файл готов к конвертации.');
- convert.disabled=!selected;
-}
-input.addEventListener('change',function(){choose(input.files&&input.files[0]);});
-['dragenter','dragover'].forEach(function(name){select.addEventListener(name,function(e){e.preventDefault();if(!busy)select.classList.add('drag');});});
-['dragleave','drop'].forEach(function(name){select.addEventListener(name,function(e){e.preventDefault();select.classList.remove('drag');});});
-select.addEventListener('drop',function(e){if(!busy&&e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0]){input.value='';choose(e.dataTransfer.files[0]);}});
-cancel.addEventListener('click',function(){stopped=true;say('Отменяем обработку…');});
-function delay(){return new Promise(function(resolve){setTimeout(resolve,0);});}
-function readArrayBuffer(file){if(typeof file.arrayBuffer==='function')return file.arrayBuffer();return new Promise(function(resolve,reject){var reader=new FileReader();reader.onload=function(){resolve(reader.result);};reader.onerror=function(){reject(reader.error||new Error('Не удалось прочитать файл.'));};reader.readAsArrayBuffer(file);});}
-function decode(context,buffer){return new Promise(function(resolve,reject){try{context.decodeAudioData(buffer,resolve,reject);}catch(e){reject(e);}});}
-var TARGET_RATE=44100, flacLoader=null;
-function isFlac(file,bytes){
- if(/\.(flac|oga)$/i.test(file.name||''))return true;
- var u=new Uint8Array(bytes,0,Math.min(4,bytes.byteLength));
- return u.length===4&&u[0]===102&&u[1]===76&&u[2]===97&&u[3]===67;
-}
-function loadFlacDecoder(){
- if(window['flac-decoder']&&window['flac-decoder'].FLACDecoder)return Promise.resolve(window['flac-decoder'].FLACDecoder);
- if(flacLoader)return flacLoader;
- flacLoader=new Promise(function(resolve,reject){
-   var s=document.createElement('script');s.charset='UTF-8';
-   s.src='vendor/flac-decoder.min.js';
-   s.onload=function(){var pkg=window['flac-decoder'];if(pkg&&pkg.FLACDecoder)resolve(pkg.FLACDecoder);else reject(new Error('FLAC-декодер не загрузился.'));};
-   s.onerror=function(){reject(new Error('Не удалось загрузить FLAC-декодер. Проверьте интернет.'));};
-   document.head.appendChild(s);
- }).catch(function(e){flacLoader=null;throw e;});
- return flacLoader;
-}
-function pcmView(channelData,rate){
- var count=channelData.length,length=channelData[0].length;
- return {sampleRate:rate,numberOfChannels:count,length:length,duration:length/rate,
-   getChannelData:function(i){return channelData[i];}};
-}
-async function decodeFLAC(bytes){
- say('Запускаем FLAC-декодер…');
- var Constructor=await loadFlacDecoder(),decoder=new Constructor();
- try{
-   await decoder.ready;
-   if(stopped)throw new Error('Отменено.');
-   say('Читаем FLAC без потери исходных данных…');
-   var decoded=await decoder.decodeFile(new Uint8Array(bytes));
-   if(!decoded||!decoded.channelData||!decoded.channelData.length||!decoded.sampleRate||!decoded.samplesDecoded)
-     throw new Error('FLAC-декодер не смог прочитать аудиоданные.');
-   if(decoded.errors&&decoded.errors.length)throw new Error('FLAC содержит ошибки и не может быть безопасно преобразован.');
-   if(decoded.channelData.length>2)throw new Error('FLAC с более чем двумя каналами пока не поддерживается.');
-   return pcmView(decoded.channelData,decoded.sampleRate);
- }finally{if(decoder&&typeof decoder.free==='function')decoder.free();}
-}
-function offlineFactory(channels,length,rate){
- var Offline=window.OfflineAudioContext||window.webkitOfflineAudioContext;
- if(!Offline)throw new Error('OfflineAudioContext недоступен.');
- return new Offline(channels,length,rate);
-}
-async function resampleAudio(audio){
- if(audio.sampleRate===TARGET_RATE)return audio;
- if(stopped)throw new Error('Отменено.');
- say('Преобразуем частоту '+Math.round(audio.sampleRate/1000)+' кГц → 44,1 кГц…');
- progress.value=12;
- var channels=audio.numberOfChannels,rate=audio.sampleRate,frames=Math.max(1,Math.round(audio.length*TARGET_RATE/rate));
- try{
-   var offline=offlineFactory(channels,frames,TARGET_RATE);
-   var buf=offline.createBuffer(channels,audio.length,rate);
-   for(var channel=0;channel<channels;channel++)buf.getChannelData(channel).set(audio.getChannelData(channel));
-   var src=offline.createBufferSource();src.buffer=buf;src.connect(offline.destination);src.start(0);
-   var result=await offline.startRendering();
-   if(stopped)throw new Error('Отменено.');
-   return result;
- }catch(err){
-   if(stopped)throw new Error('Отменено.');
-   // Some old Safari versions cannot render at the source sample rate.
-   // Use a band-limited Lanczos resampler in small async blocks as a fallback.
-   say('Совместимый режим уменьшения частоты…');
-   var output=[],scale=rate/TARGET_RATE,cutoff=Math.min(1,TARGET_RATE/rate),radius=12;
-   for(var c=0;c<channels;c++)output.push(new Float32Array(frames));
-   for(var pos=0;pos<frames;pos++){
-     if(stopped)throw new Error('Отменено.');
-     var center=pos*scale,nearest=Math.floor(center),start=nearest-radius+1,end=nearest+radius;
-     for(var ch=0;ch<channels;ch++){
-       var values=audio.getChannelData(ch),acc=0,sum=0;
-       for(var x=start;x<=end;x++){
-         var dx=center-x;if(Math.abs(dx)>=radius||x<0||x>=values.length)continue;
-         var w=dx===0?1:Math.sin(Math.PI*dx*cutoff)/(Math.PI*dx*cutoff);
-         w*=0.5+0.5*Math.cos(Math.PI*dx/radius);
-         acc+=values[x]*w;sum+=w;
-       }
-       output[ch][pos]=sum?acc/sum:0;
-     }
-     if(pos%16384===0){progress.value=12+Math.floor(3*pos/frames);await delay();}
-   }
-   return pcmView(output,TARGET_RATE);
- }
-}
-function int16(sample){return sample<-1?-32768:sample>1?32767:sample<0?Math.round(sample*32768):Math.round(sample*32767);}
-function outName(name){var base=name.replace(/\.[^.]+$/,'').replace(/[\\/:*?"<>|]+/g,'_').trim();return (base||'audio')+'.mp3';}
-convert.addEventListener('click',async function(){
- if(busy||!selected)return;
- if(!window.lamejs||typeof window.lamejs.Mp3Encoder!=='function'){say('Не удалось загрузить MP3-кодировщик. Проверьте интернет и перезагрузите страницу.');return;}
- clearResult();setBusy(true);stopped=false;progress.hidden=false;progress.value=2;
- var context=null, file=selected;
- try{
-   var AudioCtx=window.AudioContext||window.webkitAudioContext;
-   if(!AudioCtx)throw new Error('Этот браузер не поддерживает обработку аудио.');
-   say('Читаем аудиофайл…');
-   var bytes=await readArrayBuffer(file);
-   if(stopped)throw new Error('Отменено.');
-   context=new AudioCtx();
-   progress.value=10;say('Декодируем аудио…');
-   var audio=null,flac=isFlac(file,bytes);
-   try{
-     // Request the MP3-compatible target rate for native decode on modern browsers.
-     var nativeContext;
-     try{nativeContext=offlineFactory(2,1,TARGET_RATE);}catch(e){nativeContext=context;}
-     audio=await decode(nativeContext,bytes.slice(0));
-   }catch(e){
-     if(!flac)throw new Error('Браузер не может прочитать этот аудиоформат.');
-     if(stopped)throw new Error('Отменено.');
-     audio=await decodeFLAC(bytes);
-   }
-   bytes=null;
-   if(stopped)throw new Error('Отменено.');
-   // Reject oversized/unsupported decoded input BEFORE allocating new resampling buffers.
-   if(audio.numberOfChannels<1||audio.numberOfChannels>2)throw new Error('Поддерживается только моно и стерео.');
-   if(audio.duration>45*60)throw new Error('Продолжительность больше 45 минут. Разделите запись на части или используйте компьютер.');
-   audio=await resampleAudio(audio);
-   if(stopped)throw new Error('Отменено.');
-   var rate=audio.sampleRate, channels=audio.numberOfChannels;
-   if(channels<1||channels>2)throw new Error('Поддерживается моно и стерео. Для многоканального аудио требуется другой конвертер.');
-   if(rate!==TARGET_RATE)throw new Error('Не удалось подготовить частоту 44,1 кГц для MP3.');
-   if(audio.duration>45*60)throw new Error('Продолжительность больше 45 минут. Разделите запись на части или используйте компьютер.');
-   var bitrate=Number(document.querySelector('input[name="bitrate"]:checked').value);
-   var encoder=new window.lamejs.Mp3Encoder(channels,rate,bitrate);
-   var left=audio.getChannelData(0),right=channels===2?audio.getChannelData(1):null;
-   var l=new Int16Array(1152),r=channels===2?new Int16Array(1152):null;
-   var chunks=[],length=audio.length;
-   say('Создаём MP3…');
-   for(var offset=0;offset<length;offset+=1152){
-     if(stopped)throw new Error('Отменено.');
-     var count=Math.min(1152,length-offset),i;
-     for(i=0;i<count;i++){l[i]=int16(left[offset+i]);if(r)r[i]=int16(right[offset+i]);}
-     var encoded=channels===2?encoder.encodeBuffer(l.subarray(0,count),r.subarray(0,count)):encoder.encodeBuffer(l.subarray(0,count));
-     if(encoded.length)chunks.push(new Uint8Array(encoded));
-     if((offset/1152)%48===0){progress.value=15+Math.floor((offset/length)*82);await delay();}
-   }
-   if(stopped)throw new Error('Отменено.');
-   var tail=encoder.flush();if(tail.length)chunks.push(new Uint8Array(tail));
-   var blob=new Blob(chunks,{type:'audio/mpeg'});
-   if(!blob.size)throw new Error('Кодировщик вернул пустой MP3.');
-   objectUrl=URL.createObjectURL(blob);
-   download.href=objectUrl;download.download=outName(file.name);
-   download.textContent='Скачать MP3 · '+readable(blob.size);
-   download.hidden=false;progress.value=100;
-   say('Готово! MP3 создан на вашем устройстве. Нажмите «Скачать MP3».');
- }catch(e){
-   progress.hidden=true;
-   if(e&&e.message==='Отменено.')say('Конвертация отменена.');
-   else if(e&&/not supported|encoding|decode|demux/i.test(String(e.message||'')))say('Не удалось прочитать аудио. Для FLAC нужен доступ к библиотеке декодирования; попробуйте другой файл или браузер.');
-   else say('Ошибка: '+(e&&e.message?e.message:'неизвестная ошибка'));
- }finally{
-   if(context&&typeof context.close==='function'){try{await context.close();}catch(e){}}
-   setBusy(false);
- }
-});
-window.addEventListener('pagehide',clearResult);
-})();
-</script>
+<script src="audio-converter.js?v=215"></script>
 </body>
 </html>
