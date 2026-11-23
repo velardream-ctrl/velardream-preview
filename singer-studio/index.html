@@ -101,7 +101,11 @@ footer{color:#aabbd4;font-size:.82rem;line-height:1.6;padding:15px 4px}
 </section>
 <section class="panel" aria-labelledby="projects-heading">
 <h2 id="projects-heading">Личный кабинет артиста</h2>
-<p class="hint">Пока это локальная мастерская без регистрации. Можно сохранять название проекта, тональность и темп для последующих репетиций. Аудиофайлы, личные данные и история прослушиваний не сохраняются на сервере.</p>
+<p class="hint">Это локальная мастерская без входа и регистрации. Сценическое имя и настройки проектов сохраняются только в браузере этого устройства. Аудиофайлы на сервер не отправляются и в браузере не хранятся.</p>
+<label for="artist-name">Сценическое имя (необязательно)</label>
+<input id="artist-name" type="text" maxlength="60" placeholder="Например: Velar" autocomplete="nickname">
+<div class="actions"><button id="save-profile" type="button" class="secondary">Сохранить профиль на устройстве</button></div>
+<p id="artist-greeting" class="hint" aria-live="polite">Укажите сценическое имя, если хотите подписать своё рабочее пространство.</p>
 <label for="project-name">Название проекта или песни</label>
 <input id="project-name" type="text" maxlength="70" placeholder="Например: Joulun valo — моя тональность" autocomplete="off">
 <div class="actions"><button id="save-preset" type="button" class="secondary">Сохранить настройки</button></div>
