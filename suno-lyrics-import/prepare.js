@@ -8,7 +8,7 @@ function str(x){return typeof x==='string'?x.trim():'';}
 function canon(s){return str(s).normalize('NFKC').toLocaleLowerCase('ru').replace(/ё/g,'е').replace(/[‘’'"“”]/g,'').replace(/\s+/g,' ').trim();}
 function entries(document){
  if(Array.isArray(document))return document;
- for(const a of [document?.songs,document?.tracks,document?.items,document?.clips,document?.data?.songs,document?.data?.items,document?.data?.clips,document?.library?.songs])
+ for(const a of [document?.songs,document?.tracks,document?.items,document?.clips,document?.lyrics,document?.vmm_lyrics,document?.data?.songs,document?.data?.items,document?.data?.clips,document?.library?.songs])
   if(Array.isArray(a))return a;
  return [];
 }
