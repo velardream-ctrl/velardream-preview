@@ -320,9 +320,16 @@ saveBtn.addEventListener('click',async()=>{
   try{
     let blob,extension,description;
     tell('Подготавливаем файл…');
-    if(option==='wav'){blob=wavBlob(state.rendered,16);extension='wav';description='WAV 16 бит';}
-    else if(option==='flac'){blob=await flacBlob(state.rendered,16);extension='flac';description='FLAC 16 бит';}
-    else{blob=await mp3Blob(state.rendered,320);extension='mp3';description='MP3 320 кбит/с';}
+    if(option==='wav16'||option==='wav24'){
+      const bits=option==='wav24'?24:16;
+      blob=wavBlob(state.rendered,bits);extension='wav';description='WAV '+bits+' бит';
+    }else if(option==='flac16'||option==='flac24'){
+      const bits=option==='flac24'?24:16;
+      blob=await flacBlob(state.rendered,bits);extension='flac';description='FLAC '+bits+' бит';
+    }else{
+      const bitrate=option==='mp3192'?192:320;
+      blob=await mp3Blob(state.rendered,bitrate);extension='mp3';description='MP3 '+bitrate+' кбит/с';
+    }
     if(state.aborted)throw new Error('Отменено.');
     if(!blob.size)throw new Error('Результат пустой.');
     state.exportUrl=URL.createObjectURL(blob);
