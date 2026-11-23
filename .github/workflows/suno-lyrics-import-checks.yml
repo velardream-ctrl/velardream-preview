@@ -1,0 +1,26 @@
+name: Suno lyrics batch preview checks
+
+on:
+  push:
+    branches:
+      - feature/run220-suno-lyrics-batch-import-20261123
+      - test/mp3-converter-20261122
+  pull_request:
+    paths:
+      - suno-lyrics-import/**
+      - tests/test-suno-lyrics-import.mjs
+      - .github/workflows/suno-lyrics-import-checks.yml
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check safe client-only import preparation
+        run: node tests/test-suno-lyrics-import.mjs
