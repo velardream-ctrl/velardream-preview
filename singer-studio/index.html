@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="dark"><meta name="robots" content="noindex,nofollow">
+<title>Мастерская певца · Velar Dream Records</title>
+<style>
+*{box-sizing:border-box}
+:root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color-scheme:dark}
+body{margin:0;min-height:100vh;color:#f6f3ec;background:radial-gradient(ellipse at 50% 0,#243966 0,#09152e 62%,#080e1d 100%)}
+main{max-width:860px;margin:0 auto;padding:24px 17px 60px}
+header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.brand{font-family:Georgia,serif;font-size:1rem;letter-spacing:.09em;color:#f7d38d;text-decoration:none}
+header nav{display:flex;gap:17px;flex-wrap:wrap}a{color:#f4d28a}
+h1{font:400 clamp(2rem,6vw,3.5rem) Georgia,serif;margin:28px 0 10px;color:#f7e9c9}
+h2{font:400 1.5rem Georgia,serif;margin:0 0 15px;color:#fff2d7}
+h3{margin:0 0 8px;font-size:1.05rem;color:#f5d88c}
+.lead{color:#c4d3e8;line-height:1.65;max-width:690px}
+.eyebrow{color:#e0c185;font-size:.7rem;letter-spacing:.16em;font-weight:700}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:16px}
+.panel{margin:21px 0;background:linear-gradient(145deg,rgba(30,46,79,.97),rgba(9,20,43,.98));border:1px solid #506588;border-radius:20px;padding:clamp(17px,3vw,27px);box-shadow:0 15px 36px #0002}
+.drop{display:block;cursor:pointer;border:2px dashed #607fa9;border-radius:16px;text-align:center;padding:24px 14px;background:#0c1d3d;position:relative}
+.drop strong{display:block;font-size:1.13rem;color:#f4d28a;margin-bottom:6px}
+.drop small{color:#bcd0e8;line-height:1.55}
+.drop input{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden}
+.drop:focus-within{outline:2px solid #f4d28a;outline-offset:2px}
+.drop.drag{border-color:#f7d490;background:#25456f}
+label{display:block;color:#e5edfa;font-weight:600;margin:8px 0}
+.controls{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.readout{font-size:1.15rem;font-variant-numeric:tabular-nums;color:#ffe3a4}
+input[type="range"]{display:block;width:100%;accent-color:#f4d28a;margin:18px 0}
+small,.hint{font-size:.85rem;color:#b8c8df;line-height:1.55}
+select{font:inherit;width:100%;min-height:44px;border-radius:10px;border:1px solid #60769c;background:#0a1934;color:#f6f3ec;padding:10px}
+.actions{display:flex;flex-wrap:wrap;gap:9px;margin:17px 0}
+button,.save{font:inherit;min-height:45px;display:inline-flex;align-items:center;justify-content:center;gap:6px;border:0;border-radius:11px;padding:11px 16px;background:#ead08c;color:#182037;font-weight:700;cursor:pointer;text-decoration:none}
+button.secondary{background:#28436a;color:#edf2fb;border:1px solid #536c93}
+button:disabled{opacity:.45;cursor:not-allowed}
+.fileinfo{font-size:.92rem;color:#dbe6f7;overflow-wrap:anywhere;margin:12px 0 0}
+audio{width:100%;margin:9px 0}
+progress{width:100%;height:13px;accent-color:#e6c56b}
+.status{color:#e0e9f9;line-height:1.5;min-height:25px}
+.listening{margin-top:12px;border-top:1px solid #405474;padding-top:16px}
+.karaoke{opacity:.92;border-style:dashed}
+.karaoke p{color:#c7d4e7;line-height:1.55}
+footer{color:#aabbd4;font-size:.82rem;line-height:1.6;padding:15px 4px}
+[hidden]{display:none!important}
+@media(max-width:530px){.actions button,.actions .save{flex:1 1 43%;min-width:130px}}
+</style>
+</head>
+<body><main>
+<header><a class="brand" href="../">VELAR DREAM RECORDS</a><nav><a href="../">Тестовая площадка</a><a href="../mp3-converter/">Аудиоконвертер</a></nav></header>
+<p class="eyebrow">VELAR DREAM · CREATIVE LAB · TEST</p>
+<h1>Мастерская певца</h1>
+<p class="lead">Подготовьте минусовку к своему голосу: выберите файл, измените тональность и темп независимо друг от друга, прослушайте результат и сохраните его в нужном аудиоформате. Всё происходит в браузере.</p>
+<section class="panel" aria-labelledby="source-heading">
+<h2 id="source-heading">1. Загрузите фонограмму</h2>
+<label class="drop" id="drop"><strong>♫ Выбрать песню или минусовку</strong>
+<small>WAV, MP3, M4A, FLAC и другие форматы, которые поддерживает браузер. Можно перетащить файл сюда.</small>
+<input type="file" id="source-file" accept="audio/*,.wav,.flac,.m4a,.aac,.mp3,.ogg" aria-label="Выберите аудиозапись"></label>
+<div class="fileinfo" id="fileinfo" role="status">Файл пока не выбран.</div>
+</section>
+<section class="panel" aria-labelledby="tune-heading">
+<h2 id="tune-heading">2. Настройте звучание</h2>
+<div class="grid">
+<div>
+<div class="controls"><label for="pitch">Тональность</label><strong class="readout" id="pitch-label">0 полутонов</strong></div>
+<input type="range" id="pitch" min="-6" max="6" value="0" step="1">
+<small>Понизить или повысить на 1–6 полутонов, не меняя темп.</small>
+</div>
+<div>
+<div class="controls"><label for="tempo">Темп</label><strong class="readout" id="tempo-label">100%</strong></div>
+<input type="range" id="tempo" min="70" max="130" value="100" step="1">
+<small>От 70% до 130%, без изменения тональности.</small>
+</div>
+</div>
+<div class="actions">
+<button id="render" disabled type="button">Применить изменения</button>
+<button id="reset" class="secondary" type="button">Сбросить</button>
+<button id="cancel" class="secondary" disabled type="button">Отменить обработку</button>
+</div>
+<p id="status" class="status" role="status" aria-live="polite">Выберите запись, чтобы начать.</p>
+<progress id="progress" max="100" value="0" hidden aria-label="Ход обработки"></progress>
+<div class="listening">
+<h3>3. Прослушайте результат</h3>
+<div class="actions">
+<button type="button" id="listen-source" class="secondary" disabled>Исходная запись</button>
+<button type="button" id="listen-result" class="secondary" disabled>Изменённая запись</button>
+</div>
+<audio id="player" controls preload="none" aria-label="Прослушивание музыки"></audio>
+<p class="hint">При изменении настроек повторно нажмите «Применить изменения». Сохранение станет доступно после обработки.</p>
+</div>
+<div class="listening">
+<h3>4. Сохраните фонограмму</h3>
+<div class="grid"><div><label for="format">Формат</label><select id="format"><option value="wav">WAV — 16 бит (без сжатия)</option><option value="mp3">MP3 — 320 кбит/с</option><option value="flac">FLAC — 16 бит (без потерь)</option></select></div></div>
+<div class="actions"><button type="button" id="save" disabled>Создать файл для скачивания</button><a id="download" class="save" href="#" download hidden>Скачать результат</a></div>
+</div>
+</section>
+<section class="panel karaoke" aria-labelledby="future-heading">
+<h2 id="future-heading">В будущем — создание минусовки из песни</h2>
+<p>Планируется AI-разделение записи на вокал и инструментальную часть. Можно будет скачать чистый вокал и отдельную минусовку, затем изменить её тональность и темп. Сейчас функция удаления вокала ещё не подключена.</p>
+</section>
+<footer>
+Тестовый инструмент для музыки, которую вы имеете право использовать. Исходная запись не отправляется на сервер. На старых iPad и телефонах обработка длинных треков может быть недоступна. Алгоритм изменения высоты и темпа: <a href="https://github.com/cutterbl/SoundTouchJS">SoundTouchJS (LGPL-2.1)</a>; при сильных изменениях возможны звуковые артефакты. FLAC и WAV сохраняются локально; для MP3 нужен загружаемый кодировщик lamejs.
+</footer>
+</main>
+<script type="module" src="studio.js?v=217"></script>
+</body></html>
