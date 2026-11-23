@@ -1,0 +1,23 @@
+name: Preview audio and singer studio checks
+
+on:
+  push:
+    branches:
+      - test/mp3-converter-20261122
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test the universal converter
+        run: node tests/test-audio-converter.mjs
+      - name: Test singer studio controls and audio transforms
+        run: node tests/test-singer-studio.mjs
