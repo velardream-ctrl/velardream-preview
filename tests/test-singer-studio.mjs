@@ -10,7 +10,7 @@ const preview=fs.readFileSync('index.html','utf8');
 const mandatoryIds=[
   'source-file','pitch','tempo','pitch-label','tempo-label','render','reset',
   'cancel','listen-source','listen-result','player','format','save',
-  'download','project-name','save-preset','presets'
+  'download','artist-name','save-profile','artist-greeting','project-name','save-preset','presets'
 ];
 mandatoryIds.forEach(id=>assert.ok(page.includes('id="'+id+'"'),id));
 assert.match(page,/<h1>Мастерская артиста<\/h1>/);
@@ -24,6 +24,7 @@ assert.match(js,/function wavBlob\(/);
 assert.match(js,/async function mp3Blob\(/);
 assert.match(js,/async function flacBlob\(/);
 assert.match(js,/localStorage\.setItem\(PRESET_KEY/);
+assert.match(js,/localStorage\.setItem\(PROFILE_KEY/);
 assert.doesNotMatch(js,/\bfetch\s*\(|\bXMLHttpRequest\s*\(|\bFormData\s*\(/);
 new Function(js.replace("import { SoundTouch, SimpleFilter } from './vendor/soundtouch.js';",''));
 
