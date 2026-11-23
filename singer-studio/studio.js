@@ -113,7 +113,7 @@ async function selectFile(file){
   if(state.working)return;
   stopAudio();
   ['sourceUrl','renderUrl','previewUrl','exportUrl'].forEach(revokeUrl);
-  resetOutput();state.file=null;state.audio=null;$('listen-source').disabled=true;
+  resetOutput();state.file=null;state.audio=null;renderBtn.disabled=true;$('listen-source').disabled=true;
   fileInput.value=fileInput.files&&fileInput.files[0]===file?fileInput.value:'';
   if(!file){$('fileinfo').textContent='Файл пока не выбран.';tell('Выберите запись, чтобы начать.');return;}
   $('fileinfo').textContent=file.name+' · '+(file.size/1048576).toFixed(1)+' МБ';
@@ -307,6 +307,10 @@ $('listen-result').addEventListener('click',()=>{
   if(!state.rendered)return;
   if(!state.renderUrl)state.renderUrl=URL.createObjectURL(wavBlob(state.rendered,16));
   playURL(state.renderUrl);
+});
+$('format').addEventListener('change',()=>{
+  revokeUrl('exportUrl');
+  download.hidden=true;download.removeAttribute('href');
 });
 saveBtn.addEventListener('click',async()=>{
   if(!state.rendered||state.working)return;
