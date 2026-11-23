@@ -29,6 +29,7 @@ function resetOutput(){
 function stopAudio(){player.pause();player.removeAttribute('src');player.load();}
 function uiBusy(b){
   state.working=b;
+  syncSplit();
   renderBtn.disabled=b||!state.audio;cancelBtn.disabled=!b;
   fileInput.disabled=b;saveBtn.disabled=b||!state.rendered;
   $('format').disabled=b;
@@ -111,10 +112,13 @@ async function downsample(audio){
 }
 async function selectFile(file){
   if(state.working)return;
+  clearStems();
+  $('tune-heading').textContent='2. Настройте звучание';
   stopAudio();
   ['sourceUrl','renderUrl','previewUrl','exportUrl'].forEach(revokeUrl);
   resetOutput();state.file=null;state.audio=null;renderBtn.disabled=true;$('listen-source').disabled=true;
-  fileInput.value=fileInput.files&&fileInput.files[0]===file?fileInput.value:'';
+  fileInput.value='';
+  syncSplit();
   if(!file){$('fileinfo').textContent='Файл пока не выбран.';tell('Выберите запись, чтобы начать.');return;}
   $('fileinfo').textContent=file.name+' · '+(file.size/1048576).toFixed(1)+' МБ';
   const limit=mobileLimit();
@@ -141,7 +145,8 @@ async function selectFile(file){
     progress.value=20;
     const prepared=await downsample(audio);
     if(state.aborted)throw new Error('Отменено.');
-    state.audio=prepared;state.sourceUrl=URL.createObjectURL(file);$('listen-source').disabled=false;
+    state.audio=prepared;
+    $('fileinfo').textContent += ' · '+(file.type||file.name.split('.').pop())+' · '+(prepared.length/SAMPLE_RATE).toFixed(1)+' с';state.sourceUrl=URL.createObjectURL(file);$('listen-source').disabled=false;
     tell('Запись загружена. Выберите тональность и темп, затем примените изменения.');
   }catch(error){
     state.audio=null;state.file=null;
@@ -376,7 +381,8 @@ $('save-preset')?.addEventListener('click',()=>{
   state.presets=state.presets.slice(0,12);
   if(persistPresets()){drawPresets();tell('Настройки проекта сохранены только на этом устройстве.');}
 });
-window.addEventListener('pagehide',()=>{
+window.addEventListener('pagehide',event=>{
+  if(event.persisted)return;
   stopAudio();['sourceUrl','renderUrl','previewUrl','exportUrl'].forEach(revokeUrl);
 });
 const PROFILE_KEY='velardream-singer-artist-name-v1';
@@ -398,3 +404,92 @@ $('save-profile').addEventListener('click',()=>{
   }catch(error){tell('Браузер не разрешил сохранить профиль. Студия продолжит работать без него.');}
 });
 state.presets=getPresets();drawPresets();hint();
+
+let worker=null, splitRunning=false, stems=null, original=null, stemPreview=null, stemExport=null;
+const splitStatus=$('split-status'), stemPlayer=$('stem-player');
+function syncSplit(){
+  const b=state.working;
+  $('split').disabled=b||!state.audio||!!stems||typeof Worker==='undefined';
+  $('split-cancel').disabled=!splitRunning;
+  for(const id of ['stem-edit','stem-export','stem-play','original-play','stem-choice','stem-format'])$(id).disabled=b;
+}
+function clearStemExport(){
+  if(stemExport)URL.revokeObjectURL(stemExport);
+  stemExport=null;$('stem-download').hidden=true;$('stem-download').removeAttribute('href');
+}
+function clearStems(){
+  stemPlayer.pause();stemPlayer.removeAttribute('src');stemPlayer.load();
+  if(stemPreview)URL.revokeObjectURL(stemPreview);
+  stemPreview=null;clearStemExport();original=null;stems=null;
+  $('stems').hidden=true;
+  splitStatus.textContent=typeof Worker==='undefined'?'AI требует браузер с поддержкой Web Worker.':'';
+}
+function finishSplit(message){
+  splitRunning=false;uiBusy(false);$('split-progress').hidden=true;splitStatus.textContent=message;
+}
+function terminateSplit(){
+  if(worker)worker.terminate();
+  worker=null;
+}
+$('split-cancel').onclick=()=>{
+  terminateSplit();finishSplit('Разделение отменено. Можно попробовать снова.');
+};
+$('split').onclick=()=>{
+  if(state.working||!state.audio||stems)return;
+  const mobile=mobileLimit().bytes<LIMIT_MB*1048576||navigator.maxTouchPoints>1;
+  const limit=mobile?60:240;
+  if(state.audio.length>SAMPLE_RATE*limit){
+    splitStatus.textContent='Для этой тестовой версии выберите фрагмент до '+limit+' с.';return;
+  }
+  splitRunning=true;uiBusy(true);cancelBtn.disabled=true;
+  $('split-progress').hidden=false;$('split-progress').value=0;splitStatus.textContent='Подготавливаем запись…';
+  try{
+    if(!worker)worker=new Worker('./separate-worker.js?v=1');
+    worker.onerror=()=>{terminateSplit();finishSplit('Движок остановился. Попробуйте более короткую запись или другой браузер.');};
+    worker.onmessage=({data})=>{
+      if(data.error){terminateSplit();finishSplit('Ошибка разделения: '+data.error);return;}
+      if(data.stage){splitStatus.textContent=data.stage;return;}
+      if(data.percent!==undefined){$('split-progress').value=data.percent;splitStatus.textContent='Разделяем запись · '+data.percent+'%';return;}
+      original={audio:state.audio,name:state.file.name};
+      stems={vocals:normalizeAudio(data.vocals,SAMPLE_RATE),instrumental:normalizeAudio(data.instrumental,SAMPLE_RATE)};
+      $('stems').hidden=false;finishSplit('Готово. Выберите дорожку.');
+    };
+    const planes=Array.from({length:state.audio.numberOfChannels},(_,i)=>state.audio.getChannelData(i).slice());
+    worker.postMessage(planes,planes.map(x=>x.buffer));
+  }catch(error){terminateSplit();finishSplit('Не удалось запустить разделение. Попробуйте более короткий файл.');}
+};
+function previewStem(audio){
+  if(stemPreview)URL.revokeObjectURL(stemPreview);
+  stemPreview=URL.createObjectURL(wavBlob(audio,16));stemPlayer.src=stemPreview;
+  player.pause();stemPlayer.play().catch(()=>{splitStatus.textContent='Нажмите Play в плеере.';});
+}
+$('stem-play').onclick=()=>previewStem(stems[$('stem-choice').value]);
+$('original-play').onclick=()=>previewStem(original.audio);
+$('stem-choice').onchange=()=>{stemPlayer.pause();clearStemExport();};
+$('stem-format').onchange=clearStemExport;
+$('stem-edit').onclick=()=>{
+  stopAudio();resetOutput();revokeUrl('sourceUrl');
+  state.audio=stems.instrumental;state.file={name:original.name.replace(/\.[^.]+$/,'')+'_Instrumental.wav'};
+  state.sourceUrl=URL.createObjectURL(wavBlob(state.audio,16));
+  $('tune-heading').textContent='2. Настройте звучание · Instrumental';
+  $('tune-heading').scrollIntoView();tell('В редакторе — минусовка. Настройте тональность и темп.');
+  splitStatus.textContent='Минусовка открыта в редакторе.';
+};
+$('stem-export').onclick=async()=>{
+  if(state.working||!stems)return;
+  state.aborted=false;uiBusy(true);clearStemExport();
+  const stem=$('stem-choice').value, format=$('stem-format').value, audio=stems[stem];
+  try{
+    splitStatus.textContent='Готовим файл…';
+    const blob=format==='wav16'?wavBlob(audio,16):format==='flac16'?await flacBlob(audio,16):
+      await mp3Blob(audio,format==='mp3192'?192:320);
+    if(state.aborted)throw Error('Отменено.');
+    const link=$('stem-download');
+    stemExport=URL.createObjectURL(blob);link.href=stemExport;
+    link.download=original.name.replace(/\.[^.]+$/,'')+'_'+stem+'.'+format.replace(/\d+$/,'').replace(/^mp$/,'mp3');
+    link.textContent='Скачать '+link.download;link.hidden=false;splitStatus.textContent='Файл готов.';
+  }catch(error){splitStatus.textContent='Ошибка экспорта: '+error.message;}
+  finally{uiBusy(false);}
+};
+window.addEventListener('pagehide',event=>{terminateSplit();if(splitRunning)finishSplit('Разделение остановлено.');if(!event.persisted)clearStems();});
+syncSplit();

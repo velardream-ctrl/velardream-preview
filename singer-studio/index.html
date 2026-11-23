@@ -63,6 +63,21 @@ footer{color:#aabbd4;font-size:.82rem;line-height:1.6;padding:15px 4px}
 <input type="file" id="source-file" accept="audio/*,.wav,.flac,.m4a,.aac,.mp3,.ogg" aria-label="Выберите аудиозапись"></label>
 <div class="fileinfo" id="fileinfo" role="status">Файл пока не выбран.</div>
 </section>
+<section class="panel karaoke" aria-labelledby="ai-heading">
+<h2 id="ai-heading">AI-сепарация — Создать минусовку</h2>
+<p>Выберите песню выше. Экспериментальная модель выделяет голос прямо на устройстве. В минусовке могут остаться вокал и реверберация, а часть инструментов может попасть в вокальную дорожку.</p>
+<button id="split" disabled>Разделить вокал и музыку</button>
+<button id="split-cancel" class="secondary" disabled>Отменить разделение</button>
+<p id="split-status" role="status"></p><progress id="split-progress" max="100" hidden></progress>
+<div id="stems" hidden>
+<label for="stem-choice">Дорожка для прослушивания и скачивания</label>
+<select id="stem-choice"><option value="instrumental">Instrumental — минусовка</option><option value="vocals">Vocals — вокал</option></select>
+<div class="actions"><button id="stem-play">Прослушать дорожку</button><button id="original-play">Прослушать оригинал</button></div>
+<audio id="stem-player" controls preload="none"></audio>
+<label for="stem-format">Формат скачивания</label><select id="stem-format"><option value="wav16">WAV 16 бит</option><option value="flac16">FLAC 16 бит</option><option value="mp3192">MP3 192 кбит/с</option><option value="mp3320">MP3 320 кбит/с</option></select>
+<div class="actions"><button id="stem-export">Подготовить файл</button><a class="save" id="stem-download" hidden download>Скачать</a><button id="stem-edit">Открыть минусовку в редакторе</button></div>
+</div><p class="hint">Используйте записи, на обработку которых у вас есть права. WAV и FLAC сохраняют результат без дополнительных потерь. Потери исходного MP3 сохраняются.</p>
+</section>
 <section class="panel" aria-labelledby="tune-heading">
 <h2 id="tune-heading">2. Настройте звучание</h2>
 <div class="grid">
@@ -121,13 +136,10 @@ footer{color:#aabbd4;font-size:.82rem;line-height:1.6;padding:15px 4px}
 <div id="presets" aria-live="polite"></div>
 <p class="hint">Чтобы повторить обработку, выберите файл заново. Очистка данных браузера удалит сохранённые настройки. Облачные кабинеты и синхронизация — следующий отдельный этап.</p>
 </section>
-<section class="panel karaoke" aria-labelledby="future-heading">
-<h2 id="future-heading">В будущем — создание минусовки из песни</h2>
-<p>В следующей версии планируется AI-разделение записи на вокал и инструментальное сопровождение: отдельно вокал и минусовка, а затем изменение тональности и темпа. Сейчас удаления вокала нет — обещать чистое разделение любой песни было бы неправильно.</p>
-</section>
+
 <footer>
 Тестовый инструмент для музыки, которую вы имеете право использовать. Исходная запись не отправляется на сервер. На старых iPad и телефонах обработка длинных треков может быть недоступна. Алгоритм изменения высоты и темпа: <a href="https://github.com/cutterbl/SoundTouchJS">SoundTouchJS (LGPL-2.1)</a>; при сильных изменениях возможны звуковые артефакты. FLAC и WAV сохраняются локально; для MP3 нужен загружаемый кодировщик lamejs.
 </footer>
 </main>
-<script type="module" src="studio.js?v=217"></script>
+<script type="module" src="studio.js?v=218"></script>
 </body></html>
