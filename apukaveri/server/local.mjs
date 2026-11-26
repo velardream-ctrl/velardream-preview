@@ -1,11 +1,21 @@
 import {DatabaseSync} from 'node:sqlite';
 import {createServer} from 'node:http';
-import {readFileSync} from 'node:fs';
+import {readFileSync,readdirSync} from 'node:fs';
 import worker from './worker.mjs';
 export function database(file=':memory:'){
  const db=new DatabaseSync(file);
  db.exec('PRAGMA foreign_keys=ON');
- if(!db.prepare("SELECT 1 FROM sqlite_master WHERE name='accounts'").get())db.exec(readFileSync(new URL('./migrations/0001.sql',import.meta.url),'utf8'));
+ const migrations=new URL('./migrations/',import.meta.url);
+ db.exec('CREATE TABLE IF NOT EXISTS local_migrations(name TEXT PRIMARY KEY)');
+ for(const name of readdirSync(migrations).filter(f=>f.endsWith('.sql')).sort()){
+  if(db.prepare('SELECT 1 FROM local_migrations WHERE name=?').get(name))continue;
+  db.exec('BEGIN IMMEDIATE');
+  try{
+   // A database from the initial RUN-005 revision already contains 0001.
+   if(name!=='0001.sql'||!db.prepare("SELECT 1 FROM sqlite_master WHERE name='accounts'").get())db.exec(readFileSync(new URL(name,migrations),'utf8'));
+   db.prepare('INSERT INTO local_migrations VALUES(?)').run(name);db.exec('COMMIT');
+  }catch(e){db.exec('ROLLBACK');throw e}
+ }
  return {prepare(query){return {bind(...args){const stmt=db.prepare(query);return {
  first:()=>stmt.get(...args),all:()=>({results:stmt.all(...args)}),run:()=>{const r=stmt.run(...args);return {meta:{changes:r.changes,last_row_id:Number(r.lastInsertRowid)}}}
  }}}},batch(ops){db.exec('BEGIN IMMEDIATE');try{const out=ops.map(x=>x.run());db.exec('COMMIT');return out}catch(e){db.exec('ROLLBACK');throw e}}};

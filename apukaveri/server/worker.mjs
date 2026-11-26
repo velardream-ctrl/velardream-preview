@@ -83,16 +83,30 @@ export default {async fetch(req,env){
     for(const [k,v] of Object.entries(b.schedule.overrides||{})){if(!validDate(k))throw Error();normalizeIntervals(v)}}catch{return json({},400)}
     await sql('UPDATE profiles SET alias=?,city=?,category=?,schedule=?,available=? WHERE user=?',b.alias,b.city,b.category,JSON.stringify(b.schedule),Number(b.available===true),user.id).run();return json({ok:true});
   }
-  if(path==='/api/orders'&&!post)return json((await sql('SELECT * FROM orders WHERE customer=? OR provider=? OR (customer<>? AND provider IS NULL AND (target IS NULL OR target=?) AND EXISTS(SELECT 1 FROM profiles p WHERE p.user=? AND p.available=1 AND p.city=orders.city AND p.category=orders.category))',user.id,user.id,user.id,user.id,user.id).all()).results);
+  if(path==='/api/favourites'){
+    if(!post)return json((await sql('SELECT helper FROM favourites WHERE customer=? ORDER BY helper',user.id).all()).results);
+    if(!Number.isSafeInteger(b.helper)||b.helper===user.id||!await sql('SELECT user FROM profiles WHERE user=?',b.helper).first())return json({},400);
+    if(b.enabled===true)await sql('INSERT OR IGNORE INTO favourites VALUES(?,?)',user.id,b.helper).run();
+    else if(b.enabled===false)await sql('DELETE FROM favourites WHERE customer=? AND helper=?',user.id,b.helper).run();
+    else return json({},400);
+    return json({ok:true});
+  }
+  const audience="(audience='all' OR (audience='first' AND expand_at<=?) OR EXISTS(SELECT 1 FROM recipients WHERE order_id=orders.id AND helper=?))";
+  if(path==='/api/orders'&&!post)return json((await sql('SELECT * FROM orders WHERE customer=? OR provider=? OR (customer<>? AND provider IS NULL AND (target IS NULL OR target=?) AND '+audience+' AND EXISTS(SELECT 1 FROM profiles p WHERE p.user=? AND p.available=1 AND p.city=orders.city AND p.category=orders.category))',user.id,user.id,user.id,user.id,now,user.id,user.id).all()).results);
   if(path==='/api/orders'&&post){
     if(!['urgent','planned','listing'].includes(b.kind)||!['Kitee','Joensuu','Helsinki'].includes(b.city)||!Number.isSafeInteger(b.start)||!Number.isSafeInteger(b.end)||b.start%60000||b.end%60000||b.start<now||b.end<=b.start||b.end-b.start>86400000||b.end>now+366*86400000)return json({},400);
-    if(!await sql('SELECT id FROM categories WHERE id=? AND restricted=0',b.category).first())return json({},403);
+    const cat=await sql('SELECT id,commission FROM categories WHERE id=? AND restricted=0',b.category).first();if(!cat)return json({},403);
     if(b.kind==='planned'&&!b.target)return json({},400);
     if(b.target!=null && !await sql('SELECT user FROM profiles WHERE user=? AND user<>? AND category=? AND city=? AND available=1',b.target,user.id,b.category,b.city).first())return json({},400);
-    const r=await sql('INSERT INTO orders(customer,category,city,start,end,target,kind) VALUES(?,?,?,?,?,?,?)',user.id,b.category,b.city,b.start,b.end,b.target??null,b.kind).run();return json({id:r.meta.last_row_id},201);
+    const group=b.audience??'all',labour=b.labour??0,reimbursement=b.reimbursement??0;
+    if(!['all','first','favourites'].includes(group)||(b.target!=null&&group!=='all')||![labour,reimbursement].every(x=>Number.isSafeInteger(x)&&x>=0&&x<=10000000)||(cat.id===13&&labour!==0))return json({},400);
+    const percent=labour?cat.commission:0,fee=Math.round(labour*percent/100);
+    const ops=[sql('INSERT INTO orders(customer,category,city,start,end,target,kind,audience,expand_at,labour,reimbursement,fee,percent) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)',user.id,b.category,b.city,b.start,b.end,b.target??null,b.kind,group,now+300000,labour,reimbursement,fee,percent)];
+    if(group!=='all')ops.push(sql('INSERT INTO recipients SELECT (SELECT MAX(id) FROM orders WHERE customer=?),helper FROM favourites WHERE customer=?',user.id,user.id));
+    const [result]=await env.DB.batch(ops);return json({id:result.meta.last_row_id,labour,reimbursement,percent,fee},201);
   }
   if(path==='/api/claim'&&post){
-    const order=await sql('SELECT * FROM orders WHERE id=? AND customer<>? AND (target IS NULL OR target=?) AND provider IS NULL AND kind<>? AND start>?',b.id,user.id,user.id,'listing',now).first();
+    const order=await sql('SELECT * FROM orders WHERE id=? AND customer<>? AND (target IS NULL OR target=?) AND provider IS NULL AND kind<>? AND start>? AND '+audience,b.id,user.id,user.id,'listing',now,now,user.id).first();
     if(!order)return json({},409);
     const p=await sql('SELECT * FROM profiles WHERE user=? AND available=1 AND category=? AND city=?',user.id,order.category,order.city).first();
     if(!p||!covers(JSON.parse(p.schedule),order.start,order.end))return json({},409);
