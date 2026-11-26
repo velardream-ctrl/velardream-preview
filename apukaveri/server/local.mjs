@@ -23,7 +23,7 @@ export function database(file=':memory:'){
 if(import.meta.main){
  const port=Number(process.env.PORT||8787),origin='http://127.0.0.1:'+port;
  const env={MODE:'synthetic',DB:database(process.env.APUKAVERI_DB||':memory:'),deliver:(email,purpose,code)=>console.log('TEST MAIL',email,purpose,code)};
- const files={'/':'index.html','/index.html':'index.html','/account.html':'account.html','/dispatch.html':'dispatch.html','/availability.mjs':'availability.mjs','/sandbox.html':'sandbox.html','/sandbox.mjs':'sandbox.mjs','/admin':'admin.html','/owner.mjs':'owner.mjs','/logo.svg':'logo.svg','/manifest.webmanifest':'manifest.webmanifest','/sw.js':'sw.js','/icon192.png':'icon192.png','/icon512.png':'icon512.png'};
+ const files={'/':'index.html','/index.html':'index.html','/account.html':'account.html','/dispatch.html':'dispatch.html','/availability.mjs':'availability.mjs','/sandbox.html':'sandbox.html','/sandbox.mjs':'sandbox.mjs','/admin':'admin.html','/owner.mjs':'owner.mjs','/profile-tools.mjs':'profile-tools.mjs','/logo.svg':'logo.svg','/manifest.webmanifest':'manifest.webmanifest','/sw.js':'sw.js','/icon192.png':'icon192.png','/icon512.png':'icon512.png'};
  createServer(async(input,output)=>{try{
  if(input.headers.host!==new URL(origin).host){output.writeHead(403).end();return}
  const path=new URL(input.url,origin).pathname;

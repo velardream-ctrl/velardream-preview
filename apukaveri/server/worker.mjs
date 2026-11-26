@@ -75,6 +75,14 @@ export default {async fetch(req,env){
     const result=await env.DB.batch(ops);return json({},result[0].meta.changes?200:400);
   }
   if(!user)return json({},401);
+  await sql('INSERT INTO activity VALUES(?,?) ON CONFLICT(user) DO UPDATE SET last_seen=excluded.last_seen WHERE activity.last_seen<excluded.last_seen-60000',user.id,now).run();
+  if(path==='/api/avatar'){
+    if(!post)return json(await sql('SELECT pixels FROM avatars WHERE user=?',user.id).first()||{});
+    if(b.pixels===null)await sql('DELETE FROM avatars WHERE user=?',user.id).run();
+    else if(typeof b.pixels==='string'&&/^[A-Za-z0-9+/]{12288}$/.test(b.pixels))await sql('INSERT OR REPLACE INTO avatars VALUES(?,?)',user.id,b.pixels).run();
+    else return json({},400);
+    return json({ok:true});
+  }
   const financial=await finance(path,post,b,user,sql,env.DB,json,url);if(financial)return financial;
   if(path==='/api/logout'&&post){await sql('DELETE FROM tokens WHERE hash=?',session).run();return json({ok:true})}
   if(path==='/api/me'&&!post)return json({...user,...await sql('SELECT * FROM profiles WHERE user=?',user.id).first()});
@@ -94,7 +102,22 @@ export default {async fetch(req,env){
     return json({ok:true});
   }
   const audience="(audience='all' OR (audience='first' AND expand_at<=?) OR EXISTS(SELECT 1 FROM recipients WHERE order_id=orders.id AND helper=?))";
-  if(path==='/api/orders'&&!post)return json((await sql('SELECT * FROM orders WHERE customer=? OR provider=? OR (customer<>? AND provider IS NULL AND (target IS NULL OR target=?) AND '+audience+' AND EXISTS(SELECT 1 FROM profiles p WHERE p.user=? AND p.available=1 AND p.city=orders.city AND p.category=orders.category))',user.id,user.id,user.id,user.id,now,user.id,user.id).all()).results);
+  if(path==='/api/orders'&&!post){
+    const rows=(await sql('SELECT * FROM orders WHERE customer=? OR provider=? OR (customer<>? AND provider IS NULL AND (target IS NULL OR target=?) AND '+audience+' AND EXISTS(SELECT 1 FROM profiles p WHERE p.user=? AND p.available=1 AND p.city=orders.city AND p.category=orders.category))',user.id,user.id,user.id,user.id,now,user.id,user.id).all()).results;
+    const profile=await sql('SELECT schedule FROM profiles WHERE user=?',user.id).first();
+    const booked=(await sql('SELECT start,end FROM orders WHERE provider=? AND end>?',user.id,now).all()).results;
+    const visible=rows.filter(o=>o.customer===user.id||o.provider===user.id||o.kind==='listing'||(o.start>now&&covers(JSON.parse(profile.schedule),o.start,o.end)&&!booked.some(b=>b.start<o.end&&o.start<b.end)));
+    const pending=visible.filter(o=>!o.provider&&o.customer!==user.id&&o.kind!=='listing');
+    for(const o of pending)await sql('INSERT OR IGNORE INTO offers(order_id,helper) VALUES(?,?)',o.id,user.id).run();
+    return json(visible);
+  }
+  if(path==='/api/inbox'&&!post){
+    const items=(await sql('SELECT f.order_id,f.seen FROM offers f JOIN orders o ON o.id=f.order_id WHERE helper=? AND o.start>? AND (o.provider IS NULL OR o.provider=?) ORDER BY f.id DESC',user.id,now,user.id).all()).results;
+    return json({unread:items.filter(i=>!i.seen).length,items});
+  }
+  if(path==='/api/offers/view'&&post){
+    const result=await sql('UPDATE offers SET seen=COALESCE(seen,unixepoch()) WHERE order_id=? AND helper=?',b.id,user.id).run();return json({},result.meta.changes?200:404);
+  }
   if(path==='/api/orders'&&post){
     if(!['urgent','planned','listing'].includes(b.kind)||!['Kitee','Joensuu','Helsinki'].includes(b.city)||!Number.isSafeInteger(b.start)||!Number.isSafeInteger(b.end)||b.start%60000||b.end%60000||b.start<now||b.end<=b.start||b.end-b.start>86400000||b.end>now+366*86400000)return json({},400);
     const cat=await sql('SELECT id,commission FROM categories WHERE id=? AND restricted=0',b.category).first();if(!cat)return json({},403);
@@ -108,6 +131,12 @@ export default {async fetch(req,env){
     const percent=labour?(override?.rate??policy.rate):0,fee=Math.round(labour*percent/100);
     const ops=[sql('INSERT INTO orders(customer,category,city,start,end,target,kind,audience,expand_at,labour,reimbursement,fee,percent,model) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)',user.id,b.category,b.city,b.start,b.end,b.target??null,b.kind,group,now+300000,labour,reimbursement,fee,percent,model)];
     if(group!=='all')ops.push(sql('INSERT INTO recipients SELECT (SELECT MAX(id) FROM orders WHERE customer=?),helper FROM favourites WHERE customer=?',user.id,user.id));
+    if(b.kind!=='listing'){
+     const helpers=(await sql('SELECT user,schedule FROM profiles p WHERE available=1 AND user<>? AND category=? AND city=? AND (? IS NULL OR user=?) AND NOT EXISTS(SELECT 1 FROM orders o WHERE o.provider=p.user AND o.start<? AND o.end>?)',user.id,b.category,b.city,b.target??null,b.target??null,b.end,b.start).all()).results;
+     for(const h of helpers.filter(p=>covers(JSON.parse(p.schedule),b.start,b.end))){
+      ops.push(sql("INSERT OR IGNORE INTO offers(order_id,helper) SELECT id,? FROM orders o WHERE customer=? AND id=(SELECT max(id) FROM orders WHERE customer=?) AND (audience='all' OR EXISTS(SELECT 1 FROM recipients r WHERE r.order_id=o.id AND r.helper=?))",h.user,user.id,user.id,h.user));
+     }
+    }
     const [result]=await env.DB.batch(ops);return json({id:result.meta.last_row_id,labour,reimbursement,percent,fee},201);
   }
   if(path==='/api/claim'&&post){

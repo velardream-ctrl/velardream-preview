@@ -45,6 +45,9 @@ export async function finance(path,post,b,user,sql,db,json,url){
   }
   const events=(await sql('SELECT * FROM events ORDER BY seq DESC LIMIT 100').all()).results;
   const totals={};for(const l of entries)totals[l.kind]=(totals[l.kind]||0)+l.cents;
-  return json({orders:rows,entries,events,totals,policy:await sql('SELECT * FROM policy').first(),users:await sql('SELECT count(*) registered,(SELECT count(*) FROM profiles WHERE available=1) available FROM accounts').first()});
+  const helpers=(await sql("SELECT o.provider helper,count(*) assigned,sum(EXISTS(SELECT 1 FROM events e WHERE e.order_id=o.id AND e.kind='completion_confirmed')) completed FROM orders o"+where+(where?' AND ':' WHERE ')+'o.provider IS NOT NULL GROUP BY o.provider',...args).all()).results;
+  const notifications=await sql('SELECT count(*) offered,count(f.seen) viewed FROM offers f JOIN orders o ON o.id=f.order_id'+where,...args).first();
+  const invoices=(await sql("SELECT i.order_id,i.issued,i.cents,MAX(0,i.cents-COALESCE((SELECT sum(CASE kind WHEN 'fee_received' THEN cents WHEN 'refund' THEN -cents ELSE 0 END) FROM ledger WHERE order_id=i.order_id),0)) outstanding FROM invoices i JOIN orders o ON o.id=i.order_id"+where,...args).all()).results;
+  return json({orders:rows,entries,events,totals,helpers,notifications,invoices,policy:await sql('SELECT * FROM policy').first(),users:await sql('SELECT count(*) registered,(SELECT count(*) FROM activity WHERE last_seen>unixepoch()*1000-86400000) active,(SELECT count(*) FROM profiles WHERE available=1) available FROM accounts').first()});
  }
 }
