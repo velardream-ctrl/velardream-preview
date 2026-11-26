@@ -1,3 +1,4 @@
+import {finance} from './finance.mjs';
 import {intervalsForDate,normalizeIntervals,validDate} from '../availability.mjs';
 const json=(data,status=200,headers={})=>Response.json(data,{status,headers:{'Cache-Control':'no-store',...headers}});
 const fail=(status,message)=>{throw Object.assign(Error(message),{status})};
@@ -74,6 +75,7 @@ export default {async fetch(req,env){
     const result=await env.DB.batch(ops);return json({},result[0].meta.changes?200:400);
   }
   if(!user)return json({},401);
+  const financial=await finance(path,post,b,user,sql,env.DB,json,url);if(financial)return financial;
   if(path==='/api/logout'&&post){await sql('DELETE FROM tokens WHERE hash=?',session).run();return json({ok:true})}
   if(path==='/api/me'&&!post)return json({...user,...await sql('SELECT * FROM profiles WHERE user=?',user.id).first()});
   if(path==='/api/profile'&&post){
@@ -100,8 +102,11 @@ export default {async fetch(req,env){
     if(b.target!=null && !await sql('SELECT user FROM profiles WHERE user=? AND user<>? AND category=? AND city=? AND available=1',b.target,user.id,b.category,b.city).first())return json({},400);
     const group=b.audience??'all',labour=b.labour??0,reimbursement=b.reimbursement??0;
     if(!['all','first','favourites'].includes(group)||(b.target!=null&&group!=='all')||![labour,reimbursement].every(x=>Number.isSafeInteger(x)&&x>=0&&x<=10000000)||(cat.id===13&&labour!==0))return json({},400);
-    const percent=labour?cat.commission:0,fee=Math.round(labour*percent/100);
-    const ops=[sql('INSERT INTO orders(customer,category,city,start,end,target,kind,audience,expand_at,labour,reimbursement,fee,percent) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)',user.id,b.category,b.city,b.start,b.end,b.target??null,b.kind,group,now+300000,labour,reimbursement,fee,percent)];
+    const policy=await sql('SELECT * FROM policy').first(),model=labour?(b.model??'online'):'free';
+    if(!['online','split','cash','free'].includes(model)||(model==='free'&&labour)||(model==='split'&&!policy.allow_split)||(model==='cash'&&!policy.allow_cash))return json({},400);
+    const override=await sql("SELECT rate FROM rates WHERE (scope='helper' AND subject=?) OR (scope='category' AND subject=?) ORDER BY CASE scope WHEN 'helper' THEN 0 ELSE 1 END LIMIT 1",b.target??-1,b.category).first();
+    const percent=labour?(override?.rate??policy.rate):0,fee=Math.round(labour*percent/100);
+    const ops=[sql('INSERT INTO orders(customer,category,city,start,end,target,kind,audience,expand_at,labour,reimbursement,fee,percent,model) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)',user.id,b.category,b.city,b.start,b.end,b.target??null,b.kind,group,now+300000,labour,reimbursement,fee,percent,model)];
     if(group!=='all')ops.push(sql('INSERT INTO recipients SELECT (SELECT MAX(id) FROM orders WHERE customer=?),helper FROM favourites WHERE customer=?',user.id,user.id));
     const [result]=await env.DB.batch(ops);return json({id:result.meta.last_row_id,labour,reimbursement,percent,fee},201);
   }
@@ -116,7 +121,8 @@ export default {async fetch(req,env){
   if(path==='/api/admin/category'&&post){
     if(!user.owner)return json({},403);
     if(![b.fi,b.ru,b.en].every(x=>typeof x==='string'&&x.trim()&&x.length<=80)||!Number.isInteger(b.commission)||b.commission<0||b.commission>100)return json({},400);
-    const r=await sql('UPDATE categories SET fi=?,ru=?,en=?,commission=? WHERE id=?',b.fi.trim(),b.ru.trim(),b.en.trim(),b.id===13?0:b.commission,b.id).run();
+    if(!await sql('SELECT id FROM categories WHERE id=?',b.id).first())return json({},404);
+    const [r]=await env.DB.batch([sql('UPDATE categories SET fi=?,ru=?,en=?,commission=? WHERE id=?',b.fi.trim(),b.ru.trim(),b.en.trim(),b.id===13?0:b.commission,b.id),sql("INSERT OR REPLACE INTO rates VALUES('category',?,?)",b.id,b.id===13?0:b.commission),sql('INSERT INTO events(actor,kind,detail) VALUES(?,?,?)',user.id,'category_changed',JSON.stringify([b.id,b.fi,b.ru,b.en,b.commission]))]);
     return json({},r.meta.changes?200:404);
   }
   if(path==='/api/search'&&post){

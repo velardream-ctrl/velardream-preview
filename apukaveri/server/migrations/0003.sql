@@ -1,0 +1,21 @@
+CREATE TABLE policy(id INTEGER PRIMARY KEY CHECK(id=1),rate INTEGER NOT NULL DEFAULT 15,allow_split INTEGER DEFAULT 0,allow_cash INTEGER DEFAULT 0);
+INSERT INTO policy(id) VALUES(1);
+CREATE TABLE rates(scope TEXT NOT NULL CHECK(scope IN ('category','helper')),subject INTEGER NOT NULL,rate INTEGER NOT NULL CHECK(rate BETWEEN 0 AND 100),PRIMARY KEY(scope,subject));
+INSERT INTO rates SELECT 'category',id,commission FROM categories WHERE commission<>15;
+ALTER TABLE orders ADD COLUMN model TEXT NOT NULL DEFAULT 'online';
+CREATE TABLE events(seq INTEGER PRIMARY KEY,uuid TEXT NOT NULL UNIQUE DEFAULT(lower(hex(randomblob(16)))),stamp INTEGER NOT NULL DEFAULT(unixepoch()),actor INTEGER,order_id INTEGER,kind TEXT NOT NULL,detail TEXT NOT NULL DEFAULT '');
+CREATE TABLE confirmations(order_id INTEGER NOT NULL REFERENCES orders,actor INTEGER NOT NULL REFERENCES accounts,topic TEXT NOT NULL CHECK(topic IN ('completion','cash')),answer TEXT NOT NULL CHECK(answer IN ('yes','dispute')),PRIMARY KEY(order_id,actor,topic));
+CREATE TABLE ledger(id INTEGER PRIMARY KEY,stamp INTEGER NOT NULL DEFAULT(unixepoch()),order_id INTEGER NOT NULL REFERENCES orders,kind TEXT NOT NULL CHECK(kind IN ('accrual','cash_due','fee_received','refund','payout')),cents INTEGER NOT NULL CHECK(cents>=0),ref TEXT NOT NULL UNIQUE,actor INTEGER,reason TEXT NOT NULL);
+CREATE TRIGGER order_created AFTER INSERT ON orders BEGIN INSERT INTO events(actor,order_id,kind) VALUES(NEW.customer,NEW.id,'request_created'); END;
+CREATE TRIGGER order_assigned AFTER UPDATE OF provider ON orders WHEN OLD.provider IS NULL AND NEW.provider IS NOT NULL BEGIN INSERT INTO events(actor,order_id,kind) VALUES(NEW.provider,NEW.id,'offer_accepted'),(NEW.provider,NEW.id,'assigned'); END;
+CREATE TRIGGER confirmed AFTER INSERT ON confirmations BEGIN
+ INSERT INTO events(actor,order_id,kind,detail) VALUES(NEW.actor,NEW.order_id,CASE WHEN NEW.answer='dispute' THEN 'disputed' WHEN NEW.topic='cash' THEN 'cash_claimed' ELSE 'completion_claimed' END,NEW.answer);
+ INSERT INTO events(actor,order_id,kind) SELECT NEW.actor,NEW.order_id,CASE WHEN NEW.topic='cash' THEN 'cash_confirmed' ELSE 'completion_confirmed' END WHERE (SELECT count(*) FROM confirmations WHERE order_id=NEW.order_id AND topic=NEW.topic AND answer='yes')=2;
+ INSERT INTO ledger(order_id,kind,cents,ref,reason) SELECT id,'accrual',fee,'earned-'||id,'dual completion' FROM orders WHERE id=NEW.order_id AND NEW.topic='completion' AND EXISTS(SELECT 1 FROM events WHERE order_id=id AND kind='completion_confirmed');
+ INSERT OR IGNORE INTO ledger(order_id,kind,cents,ref,reason) SELECT id,'cash_due',fee,'due-'||id,'dual cash and completion' FROM orders o WHERE id=NEW.order_id AND model='cash' AND EXISTS(SELECT 1 FROM events WHERE order_id=o.id AND kind='cash_confirmed') AND EXISTS(SELECT 1 FROM events WHERE order_id=o.id AND kind='completion_confirmed');
+END;
+CREATE TRIGGER ledger_event AFTER INSERT ON ledger BEGIN INSERT INTO events(actor,order_id,kind,detail) VALUES(NEW.actor,NEW.order_id,'ledger_'||NEW.kind,NEW.reason); END;
+CREATE TRIGGER ledger_no_update BEFORE UPDATE ON ledger BEGIN SELECT RAISE(ABORT,'immutable'); END;
+CREATE TRIGGER ledger_no_delete BEFORE DELETE ON ledger BEGIN SELECT RAISE(ABORT,'immutable'); END;
+CREATE TRIGGER events_no_update BEFORE UPDATE ON events BEGIN SELECT RAISE(ABORT,'immutable'); END;
+CREATE TRIGGER events_no_delete BEFORE DELETE ON events BEGIN SELECT RAISE(ABORT,'immutable'); END;
