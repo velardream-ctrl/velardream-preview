@@ -99,6 +99,17 @@ export default {async fetch(req,env){
     const r=await sql('UPDATE orders SET provider=? WHERE id=? AND provider IS NULL AND EXISTS(SELECT 1 FROM profiles WHERE user=? AND available=1 AND schedule=? AND category=? AND city=?)',user.id,b.id,user.id,p.schedule,order.category,order.city).run();
     return json({},r.meta.changes?200:409);
   }
+  if(path==='/api/admin/category'&&post){
+    if(!user.owner)return json({},403);
+    if(![b.fi,b.ru,b.en].every(x=>typeof x==='string'&&x.trim()&&x.length<=80)||!Number.isInteger(b.commission)||b.commission<0||b.commission>100)return json({},400);
+    const r=await sql('UPDATE categories SET fi=?,ru=?,en=?,commission=? WHERE id=?',b.fi.trim(),b.ru.trim(),b.en.trim(),b.id===13?0:b.commission,b.id).run();
+    return json({},r.meta.changes?200:404);
+  }
+  if(path==='/api/search'&&post){
+    if(!Number.isSafeInteger(b.start)||!Number.isSafeInteger(b.end)||b.start<now||b.end>now+366*86400000||b.end<=b.start||b.end-b.start>86400000)return json({},400);
+    const rows=(await sql('SELECT user,alias,city,category,schedule FROM profiles p WHERE user<>? AND available=1 AND city=? AND category=? AND NOT EXISTS(SELECT 1 FROM orders o WHERE o.provider=p.user AND o.start<? AND o.end>?)',user.id,b.city,b.category,b.end,b.start).all()).results;
+    return json(rows.filter(p=>covers(JSON.parse(p.schedule),b.start,b.end)).map(({schedule,...profile})=>profile));
+  }
   if(path==='/api/admin'&&!post){if(!user.owner)return json({},403);return json(await sql('SELECT (SELECT count(*) FROM accounts) users,(SELECT count(*) FROM orders) orders').first())}
   return json({},404);
  }catch(e){if(/occupied|UNIQUE constraint/.test(String(e.cause||e)))return json({},409);return json({error:'Request failed'},e.status||500)}
