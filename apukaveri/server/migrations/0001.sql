@@ -1,0 +1,11 @@
+PRAGMA foreign_keys=ON;
+CREATE TABLE accounts(id INTEGER PRIMARY KEY,email TEXT UNIQUE NOT NULL,password TEXT NOT NULL,verified INTEGER DEFAULT 0,owner INTEGER DEFAULT 0);
+CREATE TABLE tokens(hash TEXT PRIMARY KEY,user INTEGER REFERENCES accounts ON DELETE CASCADE,purpose TEXT NOT NULL,expires INTEGER NOT NULL);
+CREATE TABLE profiles(user INTEGER PRIMARY KEY REFERENCES accounts ON DELETE CASCADE,alias TEXT NOT NULL DEFAULT 'Demo',city TEXT DEFAULT 'Kitee',category INTEGER,schedule TEXT NOT NULL DEFAULT '{}',available INTEGER DEFAULT 0);
+CREATE TABLE categories(id INTEGER PRIMARY KEY,fi TEXT NOT NULL,ru TEXT NOT NULL,en TEXT NOT NULL,restricted INTEGER NOT NULL DEFAULT 0,commission INTEGER NOT NULL DEFAULT 15 CHECK(commission BETWEEN 0 AND 100));
+INSERT INTO categories(fi,ru,en,restricted) VALUES
+('Lastenhoito','Няня на час','Babysitting',1),('Ikäihmisten apu','Помощь пожилым','Elderly assistance',1),('Koiran ulkoilutus','Выгул собак','Dog walking',0),('Lemmikkihoito','Передержка животных','Pet sitting',0),('Asiointi','Покупки и поручения','Errands',0),('Kuljetus','Доставка','Delivery',0),('Kimppakyyti','Попутчики','Shared rides',1),('Henkilökohtainen apu','Личный помощник','Personal assistance',1),('Ruoanlaitto','Приготовление еды','Cooking',0),('Siivous','Уборка','Cleaning',0),('Pihatyöt','Сад и двор','Gardening',0),('Tietokoneapu','Компьютерная помощь','Computer help',0),('Naapuriapu','Соседская помощь','Neighbourly help',0);
+UPDATE categories SET commission=0 WHERE id=13;
+CREATE TABLE orders(id INTEGER PRIMARY KEY,customer INTEGER NOT NULL REFERENCES accounts ON DELETE CASCADE,provider INTEGER REFERENCES accounts ON DELETE CASCADE,category INTEGER NOT NULL REFERENCES categories,city TEXT NOT NULL,start INTEGER NOT NULL,end INTEGER NOT NULL CHECK(end>start),target INTEGER REFERENCES accounts ON DELETE CASCADE,kind TEXT NOT NULL CHECK(kind IN ('urgent','planned','listing')));
+CREATE INDEX occupied ON orders(provider,start,end);
+CREATE TRIGGER reserve BEFORE UPDATE OF provider ON orders WHEN NEW.provider IS NOT NULL AND EXISTS(SELECT 1 FROM orders WHERE provider=NEW.provider AND id<>NEW.id AND start<NEW.end AND end>NEW.start) BEGIN SELECT RAISE(ABORT,'occupied'); END;

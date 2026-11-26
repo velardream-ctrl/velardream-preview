@@ -1,0 +1,105 @@
+import {intervalsForDate,normalizeIntervals,validDate} from '../availability.mjs';
+const json=(data,status=200,headers={})=>Response.json(data,{status,headers:{'Cache-Control':'no-store',...headers}});
+const fail=(status,message)=>{throw Object.assign(Error(message),{status})};
+const bytes=new TextEncoder();
+const hex=b=>Array.from(new Uint8Array(b),x=>x.toString(16).padStart(2,'0')).join('');
+const digest=async s=>hex(await crypto.subtle.digest('SHA-256',bytes.encode(s)));
+async function password(value,salt){
+  const key=await crypto.subtle.importKey('raw',bytes.encode(value),'PBKDF2',false,['deriveBits']);
+  return salt+'.'+hex(await crypto.subtle.deriveBits({name:'PBKDF2',hash:'SHA-256',salt:bytes.encode(salt),iterations:100000},key,256));
+}
+const clock=new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Helsinki',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'});
+export function covers(schedule,start,end){
+  if(!Number.isSafeInteger(start)||!Number.isSafeInteger(end)||start%60000||end%60000||end<=start||end-start>86400000)return false;
+  const days=new Map();
+  for(let t=start;t<end;t+=60000){
+    const [date,time]=clock.format(t).split(' ');
+    if(!days.has(date))days.set(date,intervalsForDate(schedule,date));
+    const [h,m]=time.split(':').map(Number);
+    if(!days.get(date).some(([a,b])=>a<=h*60+m && h*60+m<b))return false;
+  }
+  return true;
+}
+export default {async fetch(req,env){
+ try{
+  const url=new URL(req.url),path=url.pathname;
+  if(env.MODE!=='synthetic')return json({error:'sandbox disabled'},503);
+  const sql=(query,...args)=>env.DB.prepare(query).bind(...args);
+  const post=req.method==='POST';
+  if(!post && req.method!=='GET')return json({},405);
+  if(post && (req.headers.get('Origin')!==url.origin || !req.headers.get('Content-Type')?.startsWith('application/json')))return json({},403);
+  const raw=post?await req.text():'';
+  if(raw.length>16384)return json({},413);
+  let b;try{b=raw?JSON.parse(raw):{}}catch{return json({},400)}
+  if(!b||typeof b!=='object'||Array.isArray(b))return json({},400);
+  const now=Date.now();
+  const cookie='ak_session';
+  const secret=req.headers.get('Cookie')?.match(/(?:^|; )ak_session=([a-f0-9-]+)/)?.[1]||'';
+  const session=await digest(secret);
+  const user=await sql("SELECT a.id,a.owner FROM accounts a JOIN tokens t ON a.id=t.user WHERE t.hash=? AND purpose='session' AND expires>?",session,now).first();
+  async function issue(id,purpose,ttl){
+    const code=crypto.randomUUID();
+    await sql('INSERT INTO tokens VALUES(?,?,?,?)',await digest(code),id,purpose,now+ttl).run();
+    return code;
+  }
+  if(path==='/api/categories'&&!post)return json((await sql('SELECT * FROM categories ORDER BY id').all()).results);
+  if(post && ['/api/register','/api/login','/api/recover'].includes(path)){
+    if(!/^demo-[a-z0-9]{1,24}@example\.invalid$/.test(b.email))return json({error:'synthetic email required'},400);
+    const a=await sql('SELECT * FROM accounts WHERE email=?',b.email).first();
+    if(path.endsWith('/recover')){
+      if(a && env.deliver)await env.deliver(b.email,'reset',await issue(a.id,'reset',900000));
+      return json({ok:true});
+    }
+    if(typeof b.password!=='string'||b.password.length<12||b.password.length>128)return json({},400);
+    if(path.endsWith('/register')){
+      if(!env.deliver)return json({error:'test mailbox unavailable'},503);
+      if(a)return json({},409);
+      await env.DB.batch([sql('INSERT INTO accounts(email,password) VALUES(?,?)',b.email,await password(b.password,crypto.randomUUID())),sql('INSERT INTO profiles(user) SELECT id FROM accounts WHERE email=?',b.email)]);
+      const row=await sql('SELECT id FROM accounts WHERE email=?',b.email).first();
+      await env.deliver(b.email,'verify',await issue(row.id,'verify',900000));return json({ok:true},201);
+    }
+    if(!a?.verified || await password(b.password,a.password.split('.')[0])!==a.password)return json({},401);
+    const ttl=(b.remember?30:1)*86400000;
+    const token=await issue(a.id,'session',ttl);
+    return json({ok:true},200,{'Set-Cookie':cookie+'='+token+'; HttpOnly; SameSite=Strict; Path=/'+(url.protocol==='https:'?'; Secure':'')+(b.remember?'; Max-Age='+ttl/1000:'')});
+  }
+  if(post&&['/api/verify','/api/reset'].includes(path)){
+    const purpose=path.slice(5),hash=await digest(String(b.code)),where='SELECT user FROM tokens WHERE hash=? AND purpose=? AND expires>?';
+    const args=[hash,purpose,now],ops=[];
+    if(purpose==='reset'){
+      if(typeof b.password!=='string'||b.password.length<12||b.password.length>128)return json({},400);
+      ops.push(sql('UPDATE accounts SET password=? WHERE id IN ('+where+')',await password(b.password,crypto.randomUUID()),...args),sql("DELETE FROM tokens WHERE purpose='session' AND user IN ("+where+')',...args));
+    }else ops.push(sql('UPDATE accounts SET verified=1 WHERE id IN ('+where+')',...args));
+    ops.push(sql('DELETE FROM tokens WHERE purpose=? AND user IN ('+where+')',purpose,...args));
+    const result=await env.DB.batch(ops);return json({},result[0].meta.changes?200:400);
+  }
+  if(!user)return json({},401);
+  if(path==='/api/logout'&&post){await sql('DELETE FROM tokens WHERE hash=?',session).run();return json({ok:true})}
+  if(path==='/api/me'&&!post)return json({...user,...await sql('SELECT * FROM profiles WHERE user=?',user.id).first()});
+  if(path==='/api/profile'&&post){
+    if(!/^Demo [0-9]{1,5}$/.test(b.alias)||!['Kitee','Joensuu','Helsinki'].includes(b.city))return json({},400);
+    if(!await sql('SELECT id FROM categories WHERE id=? AND restricted=0',b.category).first())return json({},400);
+    try{for(const [k,v] of Object.entries(b.schedule.weekly||{})){if(!/^[0-6]$/.test(k))throw Error();normalizeIntervals(v)}
+    for(const [k,v] of Object.entries(b.schedule.overrides||{})){if(!validDate(k))throw Error();normalizeIntervals(v)}}catch{return json({},400)}
+    await sql('UPDATE profiles SET alias=?,city=?,category=?,schedule=?,available=? WHERE user=?',b.alias,b.city,b.category,JSON.stringify(b.schedule),Number(b.available===true),user.id).run();return json({ok:true});
+  }
+  if(path==='/api/orders'&&!post)return json((await sql('SELECT * FROM orders WHERE customer=? OR provider=? OR (customer<>? AND provider IS NULL AND (target IS NULL OR target=?) AND EXISTS(SELECT 1 FROM profiles p WHERE p.user=? AND p.available=1 AND p.city=orders.city AND p.category=orders.category))',user.id,user.id,user.id,user.id,user.id).all()).results);
+  if(path==='/api/orders'&&post){
+    if(!['urgent','planned','listing'].includes(b.kind)||!['Kitee','Joensuu','Helsinki'].includes(b.city)||!Number.isSafeInteger(b.start)||!Number.isSafeInteger(b.end)||b.start%60000||b.end%60000||b.start<now||b.end<=b.start||b.end-b.start>86400000||b.end>now+366*86400000)return json({},400);
+    if(!await sql('SELECT id FROM categories WHERE id=? AND restricted=0',b.category).first())return json({},403);
+    if(b.kind==='planned'&&!b.target)return json({},400);
+    if(b.target!=null && !await sql('SELECT user FROM profiles WHERE user=? AND user<>? AND category=? AND city=? AND available=1',b.target,user.id,b.category,b.city).first())return json({},400);
+    const r=await sql('INSERT INTO orders(customer,category,city,start,end,target,kind) VALUES(?,?,?,?,?,?,?)',user.id,b.category,b.city,b.start,b.end,b.target??null,b.kind).run();return json({id:r.meta.last_row_id},201);
+  }
+  if(path==='/api/claim'&&post){
+    const order=await sql('SELECT * FROM orders WHERE id=? AND customer<>? AND (target IS NULL OR target=?) AND provider IS NULL AND kind<>? AND start>?',b.id,user.id,user.id,'listing',now).first();
+    if(!order)return json({},409);
+    const p=await sql('SELECT * FROM profiles WHERE user=? AND available=1 AND category=? AND city=?',user.id,order.category,order.city).first();
+    if(!p||!covers(JSON.parse(p.schedule),order.start,order.end))return json({},409);
+    const r=await sql('UPDATE orders SET provider=? WHERE id=? AND provider IS NULL AND EXISTS(SELECT 1 FROM profiles WHERE user=? AND available=1 AND schedule=? AND category=? AND city=?)',user.id,b.id,user.id,p.schedule,order.category,order.city).run();
+    return json({},r.meta.changes?200:409);
+  }
+  if(path==='/api/admin'&&!post){if(!user.owner)return json({},403);return json(await sql('SELECT (SELECT count(*) FROM accounts) users,(SELECT count(*) FROM orders) orders').first())}
+  return json({},404);
+ }catch(e){if(/occupied|UNIQUE constraint/.test(String(e.cause||e)))return json({},409);return json({error:'Request failed'},e.status||500)}
+}};
