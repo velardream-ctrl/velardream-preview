@@ -43,9 +43,9 @@ header nav{display:flex;flex-wrap:nowrap;align-items:center;gap:6px;white-space:
     <label class="field"><span id="municipalityLabel"></span><select id="municipality"></select></label>
     <label class="field"><span data-t="city"></span><select id="city"></select></label>
   </div>
-  <h2 id="catalogTitle" data-t="catalog"></h2><p class="panel muted" data-t="empty"></p>
+  <h2 id="catalogTitle" data-t="catalog"></h2><p id="emptyCatalog" class="panel muted" data-t="empty"></p><article class="panel" id="ownProfile" hidden></article>
 </main>
-<script type="module">
+<script src="/helper-profile.js"></script><script type="module">
 import { serviceCategories as cats } from "./service-categories.mjs";
 import { finnishCities } from "./finnish-cities.mjs";
 import { setLocationSelects } from "./location-select.mjs";
@@ -55,6 +55,7 @@ const translations = {
     headline: "Apua lähellä, kun sitä tarvitset.", intro: "Apukaveri auttaa löytämään apua arjen askareisiin.",
     categories: "Mihin tarvitset apua?", service: "Palvelu", all: "Kaikki palvelut", city: "Kaupunki",
     catalog: "Apukaverit", empty: "Julkaistuja auttajaprofiileja ei vielä ole.",
+    own: "Oma profiili", preview: "Esikatselu tässä selaimessa", noMatch: "Oma profiilisi ei vastaa valittuja suodattimia.",
     status: "Valmistelemme palvelun avaamista. Rekisteröinti ja varaukset avataan myöhemmin.",
     intermediary: "Apukaveri on välitysalusta. Työn tekee valitsemasi tekijä.",
     warm: "Lämmin", blue: "Sininen", palette: "Vaihda väripalettia", sandbox: "Palvelintesti", account: "Oma Apukaveri",
@@ -63,6 +64,7 @@ const translations = {
     headline: "Помощь рядом, когда она нужна.", intro: "Apukaveri помогает найти поддержку в повседневных делах.",
     categories: "Чем вам помочь?", service: "Услуга", all: "Все услуги", city: "Город",
     catalog: "Каталог помощников", empty: "Опубликованных анкет помощников пока нет.",
+    own: "Моя анкета", preview: "Предпросмотр в этом браузере", noMatch: "Ваша анкета не подходит под выбранные фильтры.",
     status: "Готовим сайт к запуску. Регистрация и заявки откроются позже.",
     intermediary: "Apukaveri — платформа-посредник. Работу выполняет выбранный вами исполнитель.",
     warm: "Тёплая", blue: "Синяя", palette: "Переключить цветовую тему", sandbox: "Серверный стенд", account: "Личный кабинет",
@@ -71,6 +73,7 @@ const translations = {
     headline: "Help nearby, when you need it.", intro: "Apukaveri helps you find support with everyday tasks.",
     categories: "What do you need help with?", service: "Service", all: "All services", city: "City",
     catalog: "Find a helper", empty: "No helper profiles have been published yet.",
+    own: "My profile", preview: "Preview in this browser", noMatch: "Your profile does not match the selected filters.",
     status: "We are preparing to launch. Registration and bookings will open later.",
     intermediary: "Apukaveri is an intermediary platform. Your chosen helper performs the work.",
     warm: "Warm", blue: "Blue", palette: "Switch colour theme", sandbox: "Server sandbox", account: "My account",
@@ -82,6 +85,44 @@ try {
   const saved = localStorage.getItem("apukaveri-demo-language");
   if (Object.hasOwn(translations, saved)) lang = saved;
 } catch {}
+
+function renderOwnProfile() {
+  const t = translations[lang];
+  const profile = helperProfile.readAccount();
+  const allServices = helperProfile.read();
+  const service = el("service").value;
+  const place = finnishCities.find(city => city.city === profile.city);
+  const municipality = el("municipality").value;
+  const city = el("city").value;
+  const services = allServices.filter(item => !service || item.service === service);
+  const matches = services.length > 0 &&
+    (!municipality || place?.id === municipality) && (!city || place?.city === city);
+  const card = el("ownProfile");
+  const empty = el("emptyCatalog");
+  empty.hidden = matches;
+  empty.textContent = allServices.length ? t.noMatch : t.empty;
+  card.hidden = !matches;
+  card.replaceChildren();
+  if (!matches) return;
+
+  const title = document.createElement("h3");
+  title.textContent = profile.name || t.own;
+  const badge = document.createElement("p");
+  badge.className = "muted";
+  badge.textContent = [t.preview, place?.[lang]].filter(Boolean).join(" · ");
+  const list = document.createElement("ul");
+  const money = new Intl.NumberFormat(lang, { style: "currency", currency: "EUR" });
+  for (const item of services) {
+    const row = document.createElement("li");
+    row.textContent = item.labels[lang] + " · " + money.format(item.rate) + (lang === "ru" ? " / ч" : " / h");
+    list.append(row);
+  }
+  const link = document.createElement("a");
+  link.href = "/account.html";
+  link.className = "account-link";
+  link.textContent = t.account;
+  card.append(title, badge, list, link);
+}
 
 function renderCategories() {
   const selected = el("service").value;
@@ -101,6 +142,7 @@ function renderCategories() {
     };
     return button;
   }));
+  renderOwnProfile();
 }
 
 function render() {
@@ -125,7 +167,7 @@ function render() {
   service.value = selected;
   setLocationSelects({
     municipality: el("municipality"), city: el("city"), label: el("municipalityLabel"),
-    locations: finnishCities, locale: lang,
+    locations: finnishCities, locale: lang, onChange: renderOwnProfile,
   });
   renderCategories();
 }
@@ -140,6 +182,8 @@ el("style").onclick = () => {
   render();
 };
 el("service").onchange = renderCategories;
+window.addEventListener("pageshow", renderOwnProfile);
+window.addEventListener("storage", renderOwnProfile);
 render();
 </script>
 </body></html>

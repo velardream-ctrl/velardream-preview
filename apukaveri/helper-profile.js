@@ -1,4 +1,5 @@
 const helperProfile = (() => {
+  const accountKey = "apukaveri-local-profile-v1";
   const key = "apukaveri-demo-helper-v1";
   const words = {
     fi: ["Tallenna oma palvelu", "Muokkaa omaa palvelua", "Olet demoauttaja tässä selaimessa.", "Tallennus epäonnistui. Salli sivuston tallennustila ja yritä uudelleen.", "Valitse palvelu ja tuntihinta. Tiedot tallennetaan tähän selaimeen.", "Oma palvelu", "Siirry omalle sivulle", "Tarkista palvelu ja tuntihinta."],
@@ -29,5 +30,13 @@ const helperProfile = (() => {
   function remove(service) {
     localStorage.setItem(key, JSON.stringify(read().filter(item => item.service !== service)));
   }
-  return { read, words, save, remove };
+  function readAccount() {
+    try {
+      const account = JSON.parse(localStorage.getItem(accountKey));
+      return account && typeof account === "object" && !Array.isArray(account) ? account : {};
+    } catch {
+      return {};
+    }
+  }
+  return { read, words, save, remove, readAccount, accountKey };
 })();

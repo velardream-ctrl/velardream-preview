@@ -7,7 +7,7 @@
 </style></head><body><header><a class="brand-link" href="/"><img src="logo.svg" alt="" width="32" height="32">Apukaveri</a><select id="lang" aria-label="Language" style="width:auto"><option value="fi">Suomi</option><option value="en">English</option><option value="ru">Русский</option></select></header><main><h1 data-t="title"></h1><p class="notice" data-t="notice"></p><div class="role-actions">
 <button type="button" data-tab="search" data-t="findHelp"></button>
 <button type="button" data-tab="helper" data-t="offerHelp"></button>
-</div><div class="layout"><nav id="nav" aria-label="Demo navigation"><button data-tab="profile" data-t="profile"></button><button data-tab="schedule" data-t="schedule"></button><button data-tab="search" data-t="search"></button><button hidden style="display:none" data-tab="owner" data-t="owner"></button><button data-tab="notifications" data-t="notifications"></button></nav><div><section id="profile"><div id="helperSummary" class="result" hidden><strong id="helperTitle"></strong><ul id="helperService"></ul></div><h2 data-t="profile"></h2><div class="row"><div class="avatar" id="avatar">☺</div><div><label><span data-t="photo"></span><input type="file" id="photo" accept="image/jpeg,image/png,image/webp"></label><span class="muted" data-t="photoNote"></span></div></div><div class="pair"><label><span data-t="name"></span><input value="Aino (demo)" id="name" maxlength="80"></label><label><span data-t="city"></span><select id="city"><option>Kitee</option><option>Joensuu</option><option>Savonlinna</option><option>Porvoo</option></select></label></div><fieldset><legend data-t="languages"></legend><div id="languages" class="language-choices"></div></fieldset><label><span data-t="description"></span><textarea id="description" rows="3" maxlength="500"></textarea></label><label><span data-t="phone"></span><input id="phone" type="tel" autocomplete="tel" maxlength="32"></label><p class="muted" data-t="privacy"></p><button id="profilePreview" data-t="saveProfile"></button> <button id="removePhoto" data-t="removePhoto"></button><div id="profileResult" class="result hidden" role="status"></div></section>
+</div><div class="layout"><nav id="nav" aria-label="Demo navigation"><button data-tab="profile" data-t="profile"></button><button data-tab="schedule" data-t="schedule"></button><button data-tab="search" data-t="search"></button><button hidden style="display:none" data-tab="owner" data-t="owner"></button><button data-tab="notifications" data-t="notifications"></button></nav><div><section id="profile"><div id="helperSummary" class="result" hidden><strong id="helperTitle"></strong><ul id="helperService"></ul></div><h2 data-t="profile"></h2><div class="row"><div class="avatar" id="avatar">☺</div><div><label><span data-t="photo"></span><input type="file" id="photo" accept="image/jpeg,image/png,image/webp"></label><span class="muted" data-t="photoNote"></span></div></div><div class="pair"><label><span data-t="name"></span><input value="Aino (demo)" id="name" maxlength="80"></label><label><span data-t="city"></span><select id="city"></select></label></div><fieldset><legend data-t="languages"></legend><div id="languages" class="language-choices"></div></fieldset><label><span data-t="description"></span><textarea id="description" rows="3" maxlength="500"></textarea></label><label><span data-t="phone"></span><input id="phone" type="tel" autocomplete="tel" maxlength="32"></label><p class="muted" data-t="privacy"></p><button id="profilePreview" data-t="saveProfile"></button> <button id="removePhoto" data-t="removePhoto"></button><div id="profileResult" class="result hidden" role="status"></div></section>
 <section id="schedule" class="hidden"><h2 data-t="schedule"></h2><p data-t="weekly"></p><div id="days"></div><h2 style="margin-top:20px" data-t="exceptions"></h2><p data-t="exceptionNote"></p><label><span data-t="date"></span><input type="date" id="exDate" value="2026-12-14"></label><label><span data-t="dayMode"></span><select id="exMode"><option value="closed" data-t="closed"></option><option value="open" data-t="custom"></option></select></label><div class="pair"><label><span data-t="from"></span><input id="exStart" type="time" value="18:00"></label><label><span data-t="to"></span><input id="exEnd" type="time" value="21:00"></label></div><div class="row"><button id="saveException" data-t="add"></button><button id="clearException" data-t="remove"></button></div><div id="exceptionsList" class="muted"></div><p id="scheduleStatus" role="status"></p></section>
 <section id="helper" class="hidden">
 <h2 data-t="offerHelp"></h2><p data-t="helperLocal"></p>
@@ -20,6 +20,7 @@
 </section>
 <section id="search" class="hidden"><h2 data-t="findHelp"></h2><p><a href="/#catalogTitle" data-t="browseServices"></a></p><p data-t="searchNote"></p><label><span data-t="date"></span><input id="queryDate" type="date" value="2026-12-07"></label><div class="pair"><label><span data-t="from"></span><input id="queryStart" type="time" value="10:00"></label><label><span data-t="to"></span><input id="queryEnd" type="time" value="12:00"></label></div><button id="check" data-t="check"></button><div class="result" id="queryResult" role="status"></div><p class="muted" data-t="busyNote"></p></section>
 <section id="notifications" class="hidden"><h2 data-t="notifications"></h2><p data-t="notificationHelp"></p><button id="testNotification" data-t="testNotification"></button><p id="notificationStatus" role="status"></p></section><section id="owner" class="hidden"><h2 data-t="owner"></h2><p data-t="ownerNote"></p><div class="menu" id="ownerMenu"></div></section></div></div></main><script src="helper-profile.js"></script><script type="module">
+import { finnishCities } from "./finnish-cities.mjs";
 import { serviceCategories } from "./service-categories.mjs";
 import { normalizeLanguages, showLanguageChoices, readLanguageChoices } from "./profile-languages.mjs";
 import { uploadThumbnail, displayThumbnail } from './profile-tools.mjs';
@@ -128,10 +129,14 @@ $("saveService").onclick = () => {
     $("helperStatus").textContent = t("saveError");
   }
 };
-const profileKey = "apukaveri-local-profile-v1";
 const profileFields = ["name", "phone", "city", "description"];
-let profile = {};
-try { profile = JSON.parse(localStorage.getItem(profileKey)) || {}; } catch {}
+let profile = helperProfile.readAccount();
+function renderProfileCities(selected = $("city").value) {
+  const cities = [...finnishCities].sort((a,b) => a[lang].localeCompare(b[lang], lang));
+  $("city").replaceChildren(...cities.map(city => new Option(city[lang], city.city)));
+  $("city").value = cities.some(city => city.city === selected) ? selected : "Kitee";
+}
+renderProfileCities(profile.city);
 for (const field of profileFields) {
   if (typeof profile[field] === "string") $(field).value = profile[field];
 }
@@ -155,7 +160,7 @@ function saveProfile(photo = profile.photo) {
     const next = Object.fromEntries(profileFields.map(field => [field, $(field).value.trim()]));
     next.languages = readLanguageChoices($("languages"));
     if (photo) next.photo = photo;
-    localStorage.setItem(profileKey, JSON.stringify(next));
+    localStorage.setItem(helperProfile.accountKey, JSON.stringify(next));
     profile = next;
     showPhoto();
     result.textContent = t("saved");
@@ -201,6 +206,7 @@ showPhoto();
 function renderDays(){const root=$("days");root.replaceChildren();days.forEach(d=>{const row=document.createElement("div");row.className="day";const label=document.createElement("label"),cb=document.createElement("input");cb.type="checkbox";cb.checked=!!schedule.weekly[d].length;label.append(cb,document.createTextNode(t("days")[d]));const start=document.createElement("input"),end=document.createElement("input");for(const el of [start,end])el.type="time";start.value=schedule.weekly[d][0]?.start||"09:00";end.value=schedule.weekly[d][0]?.end||"17:00";start.setAttribute("aria-label",t("from")+" "+t("days")[d]);end.setAttribute("aria-label",t("to")+" "+t("days")[d]);const update=()=>{try{const value=cb.checked?[{start:start.value,end:end.value}]:[];normalizeIntervals(value);schedule.weekly[d]=value;start.disabled=end.disabled=!cb.checked;$("scheduleStatus").textContent=""}catch{$("scheduleStatus").textContent=t("invalid")}};cb.onchange=start.onchange=end.onchange=update;start.disabled=end.disabled=!cb.checked;row.append(label,start,end);root.append(row)})}
 function renderExceptions(){$("exceptionsList").textContent=Object.entries(schedule.overrides).map(([date,r])=>date+" · "+(r.length?r[0].start+"–"+r[0].end:t("closed"))).join(" | ")}
 function render(){
+ renderProfileCities();
  renderServiceChoices();
  showLanguageChoices($("languages"), lang);
  renderSavedServices();
