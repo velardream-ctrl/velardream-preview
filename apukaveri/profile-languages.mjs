@@ -1,14 +1,13 @@
-export const languageCodes = ["fi", "en", "ru", "uk"];
+export const languageCodes = ["fi", "en", "ru"];
 const labels = {
-  fi: ["Suomi", "Englanti", "Venäjä", "Ukraina"],
-  ru: ["Финский", "Английский", "Русский", "Украинский"],
-  en: ["Finnish", "English", "Russian", "Ukrainian"],
+  fi: ["Suomi", "Englanti", "Venäjä"],
+  ru: ["Финский", "Английский", "Русский"],
+  en: ["Finnish", "English", "Russian"],
 };
 const legacyAliases = [
   ["finnish", "suomi", "финский", "фінська"],
   ["english", "englanti", "английский", "англійська"],
   ["russian", "venäjä", "русский", "російська"],
-  ["ukrainian", "ukraina", "украинский", "українська", "ua"],
 ];
 export function normalizeLanguages(value) {
   const parts = Array.isArray(value)

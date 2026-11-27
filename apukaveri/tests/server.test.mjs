@@ -81,7 +81,7 @@ test("synthetic account, permissions, persistence, concurrent claims and reset",
             city: "Kitee",
             category: 3,
             available: true,
-            languages: ["fi", "uk"],
+            languages: ["fi", "ru"],
             schedule,
           },
           actor,
@@ -117,10 +117,10 @@ test("synthetic account, permissions, persistence, concurrent claims and reset",
   }
   assert.equal((await (await api("me", null, p)).json()).city, "Kitee");
   const languageProfile = { alias: "Demo 1", city: "Kitee", category: 3, available: true, schedule };
-  assert.equal((await api("profile", { ...languageProfile, languages: ["xx"] }, p)).status, 400);
+  assert.equal((await api("profile", { ...languageProfile, languages: ["uk"] }, p)).status, 400);
   assert.equal((await api("profile", { ...languageProfile, languages: ["fi", "fi"] }, p)).status, 400);
   assert.equal((await api("profile", languageProfile, p)).status, 200);
-  assert.deepEqual(JSON.parse((await (await api("me", null, p)).json()).languages), ["fi", "uk"]);
+  assert.deepEqual(JSON.parse((await (await api("me", null, p)).json()).languages), ["fi", "ru"]);
 
   const make = async () =>
     (await (await api("orders", order, customer)).json()).id;
