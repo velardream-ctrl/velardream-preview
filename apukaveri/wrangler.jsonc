@@ -1,0 +1,6 @@
+{
+  "name": "apukaveri-preview",
+  "compatibility_date": "2026-05-01",
+  "workers_dev": true,
+  "assets": { "directory": "./public-build" }
+}

@@ -73,6 +73,7 @@ if (import.meta.main) {
   const files = {
     "/": "index.html",
     "/index.html": "index.html",
+    "/helper-profile.js": "helper-profile.js",
     "/account.html": "account.html",
     "/dispatch.html": "dispatch.html",
     "/availability.mjs": "availability.mjs",
