@@ -125,10 +125,19 @@ test("synthetic account, permissions, persistence, concurrent claims and reset",
   const make = async () =>
     (await (await api("orders", order, customer)).json()).id;
   const id = await make();
+  const inbox = async (actor) => (await api("inbox", null, actor)).json();
+  assert.deepEqual(await inbox(p), { unread: 1, items: [{ order_id: id, seen: null }] });
+  assert.deepEqual(await inbox(customer), { unread: 0, items: [] });
+  assert.equal((await api("offers/view", { id }, customer)).status, 404);
+  assert.equal((await api("offers/view", { id }, p)).status, 200);
+  assert.equal((await inbox(p)).unread, 0);
+  assert.equal((await inbox(q)).unread, 1);
   const race = await Promise.all([p, q].map((c) => api("claim", { id }, c)));
   assert.deepEqual(race.map((x) => x.status).sort(), [200, 409]);
   const winner = race[0].status === 200 ? p : q;
   assert.equal((await api("claim", { id: await make() }, winner)).status, 409);
+  const loser = winner === p ? q : p;
+  assert.ok(!(await inbox(loser)).items.some((item) => item.order_id === id));
   const later = {
     ...order,
     start: start + 7200000,
@@ -141,6 +150,15 @@ test("synthetic account, permissions, persistence, concurrent claims and reset",
     (await api("favourites", { helper: 2, enabled: true }, customer)).status,
     200,
   );
+  const shifted = await (await api("orders", { ...later, start: later.start + 7200000,
+    end: later.end + 7200000, audience: "all", kind: "planned", target: 2 }, customer)).json();
+  assert.ok((await inbox(p)).items.some(item => item.order_id === shifted.id));
+  assert.ok(!(await inbox(q)).items.some(item => item.order_id === shifted.id));
+  assert.equal((await api("profile", { ...languageProfile, available: false }, p)).status, 200);
+  assert.ok(!(await inbox(p)).items.some(item => item.order_id === shifted.id));
+  assert.equal((await api("profile", languageProfile, p)).status, 200);
+  assert.equal((await api("cancel", { id: shifted.id }, customer)).status, 200);
+  assert.ok(!(await inbox(p)).items.some(item => item.order_id === shifted.id));
   const invoice = await (await api("orders", later, customer)).json();
   assert.deepEqual(
     [invoice.percent, invoice.fee, invoice.reimbursement],

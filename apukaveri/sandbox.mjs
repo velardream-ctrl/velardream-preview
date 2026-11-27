@@ -244,8 +244,8 @@ function render() {
       button(31) +
       button(38) +
       button(18) +
-      button(19) +
-      '</div><p id="unread"></p><ul id="orders"></ul></article>' +
+      '</div><div class="actions">' + button(19) +
+      '<span id="unread" role="status" aria-live="polite" aria-atomic="true"></span></div><ul id="orders"></ul></article>' +
       button(21);
   el("app").innerHTML = html;
   if (me) {
@@ -326,12 +326,20 @@ const ratingCopy = {
   ru: ["Оцените помощника", "Отправить оценку", "Оценка", "Пока без оценок"],
   en: ["Rate helper", "Submit rating", "Rating", "No ratings yet"],
 };
+async function refreshUnread() {
+  const badge = el("unread");
+  if (!badge) return;
+  const inbox = await api("inbox");
+  if (!badge.isConnected) return;
+  const summary = t(64) + " · " + inbox.unread;
+  if (badge.textContent !== summary) badge.textContent = summary;
+}
 async function orders() {
-  const rows = await api("orders"),
-    inbox = await api("inbox");
   const ul = el("orders");
   if (!ul) return;
-  el("unread").textContent = t(64) + " · " + inbox.unread;
+  const rows = await api("orders");
+  await refreshUnread();
+  if (!ul.isConnected) return;
   ul.replaceChildren();
   if (!rows.length) ul.textContent = t(26);
   for (const row of rows) {
@@ -608,6 +616,8 @@ try {
 if (location.protocol !== "https:" && "serviceWorker" in navigator)
   navigator.serviceWorker.register("./sw.js").catch(() => {});
 
-setInterval(() => {
-  if (me && !document.hidden) orders().catch(() => {});
-}, 30000);
+function pollUnread() {
+  if (me && !document.hidden) refreshUnread().catch(() => {});
+}
+document.addEventListener("visibilitychange", pollUnread);
+setInterval(pollUnread, 30000);

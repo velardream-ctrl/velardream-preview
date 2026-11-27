@@ -382,6 +382,19 @@ export default {
       }
       const audience =
         "(audience='all' OR (audience='first' AND expand_at<=?) OR EXISTS(SELECT 1 FROM recipients WHERE order_id=orders.id AND helper=?))";
+      async function offerAvailability() {
+        const [profile, bookings] = await Promise.all([
+          sql("SELECT schedule FROM profiles WHERE user=?", user.id).first(),
+          sql(
+            "SELECT start,end FROM orders WHERE cancelled=0 AND provider=? AND end>?",
+            user.id, now,
+          ).all(),
+        ]);
+        const schedule = JSON.parse(profile?.schedule || "{}");
+        return (order) => order.start > now &&
+          covers(schedule, order.start, order.end) &&
+          !bookings.results.some(booking => booking.start < order.end && order.start < booking.end);
+      }
       if (path === "/api/orders" && !post) {
         const rows = (
           await sql(
@@ -397,25 +410,10 @@ export default {
             user.id,
           ).all()
         ).results;
-        const profile = await sql(
-          "SELECT schedule FROM profiles WHERE user=?",
-          user.id,
-        ).first();
-        const booked = (
-          await sql(
-            "SELECT start,end FROM orders WHERE cancelled=0 AND provider=? AND end>?",
-            user.id,
-            now,
-          ).all()
-        ).results;
+        const canReceive = await offerAvailability();
         const visible = rows.filter(
-          (o) =>
-            o.customer === user.id ||
-            o.provider === user.id ||
-            o.kind === "listing" ||
-            (o.start > now &&
-              covers(JSON.parse(profile.schedule), o.start, o.end) &&
-              !booked.some((b) => b.start < o.end && o.start < b.end)),
+          (o) => o.customer === user.id || o.provider === user.id ||
+            o.kind === "listing" || canReceive(o),
         );
         const pending = visible.filter(
           (o) => !o.provider && o.customer !== user.id && o.kind !== "listing",
@@ -446,14 +444,17 @@ export default {
         );
       }
       if (path === "/api/inbox" && !post) {
-        const items = (
+        const rows = (
           await sql(
-            "SELECT f.order_id,f.seen FROM offers f JOIN orders o ON o.id=f.order_id WHERE helper=? AND o.cancelled=0 AND o.start>? AND (o.provider IS NULL OR o.provider=?) ORDER BY f.id DESC",
-            user.id,
-            now,
-            user.id,
+            "SELECT f.order_id,f.seen,orders.start,orders.end,orders.provider FROM offers f JOIN orders ON orders.id=f.order_id WHERE f.helper=? AND orders.cancelled=0 AND orders.start>? AND (orders.provider=? OR (orders.provider IS NULL AND (orders.target IS NULL OR orders.target=?) AND " +
+              audience +
+              " AND EXISTS(SELECT 1 FROM profiles p WHERE p.user=? AND p.available=1 AND p.city=orders.city AND p.category=orders.category))) ORDER BY f.id DESC",
+            user.id, now, user.id, user.id, now, user.id, user.id,
           ).all()
         ).results;
+        const canReceive = await offerAvailability();
+        const items = rows.filter(row => row.provider === user.id || canReceive(row))
+          .map(({ order_id, seen }) => ({ order_id, seen }));
         return json({ unread: items.filter((i) => !i.seen).length, items });
       }
       if (path === "/api/offers/view" && post) {
