@@ -138,7 +138,15 @@ async function api(name, data) {
         }
       : {},
   );
-  if (!r.ok) throw Error(String(r.status));
+  if (!r.ok) {
+    const detail = await r.json().catch(() => null);
+    if (detail?.error === "helper_unavailable") throw Error({
+      fi: "Tekijä ei ole vapaa koko valituksi ajaksi.",
+      ru: "Исполнитель недоступен на весь выбранный период.",
+      en: "The helper is unavailable for the full selected period.",
+    }[locale]);
+    throw Error(String(r.status));
+  }
   return r.json();
 }
 const pilotCopy = {

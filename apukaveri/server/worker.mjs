@@ -494,17 +494,14 @@ export default {
         ).first();
         if (!cat) return json({}, 403);
         if (b.kind === "planned" && !b.target) return json({}, 400);
-        if (
-          b.target != null &&
-          !(await sql(
-            "SELECT user FROM profiles WHERE user=? AND user<>? AND category=? AND city=? AND available=1",
-            b.target,
-            user.id,
-            b.category,
-            b.city,
-          ).first())
-        )
-          return json({}, 400);
+        if (b.target != null) {
+          const target = await sql(
+            "SELECT p.schedule FROM profiles p WHERE p.user=? AND p.user<>? AND p.category=? AND p.city=? AND p.available=1 AND NOT EXISTS(SELECT 1 FROM orders o WHERE o.cancelled=0 AND o.provider=p.user AND o.start<? AND o.end>?)",
+            b.target, user.id, b.category, b.city, b.end, b.start,
+          ).first();
+          if (!target || !covers(JSON.parse(target.schedule), b.start, b.end))
+            return json({ error: "helper_unavailable" }, 409);
+        }
         const group = b.audience ?? "all",
           labour = b.labour ?? 0,
           reimbursement = b.reimbursement ?? 0;
