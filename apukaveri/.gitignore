@@ -1,3 +1,4 @@
 .wrangler/
 *.sqlite*
 /public-build/
+/server-build/

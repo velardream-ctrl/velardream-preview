@@ -4,6 +4,7 @@
  "compatibility_date":"2026-05-01",
  "workers_dev":false,
  "preview_urls":false,
+ "assets":{"directory":"./server-build","binding":"ASSETS","run_worker_first":true,"html_handling":"none"},
  "vars":{"MODE":"synthetic"},
  "d1_databases":[{"binding":"DB","database_name":"apukaveri-local-test","database_id":"00000000-0000-4000-8000-000000000005","migrations_dir":"server/migrations"}]
 }
