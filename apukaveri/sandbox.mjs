@@ -139,29 +139,34 @@ async function api(name, data) {
   if (!r.ok) throw Error(String(r.status));
   return r.json();
 }
+const pilotCopy = {
+  fi: ["Käytä sinulle annettua testitiliä ja keksittyjä testitietoja.", "Omistajan paneeli"],
+  ru: ["Войдите в выданный тестовый аккаунт. Используйте вымышленные данные.", "Панель владельца"],
+  en: ["Sign in with your provisioned test account. Use invented test details.", "Owner dashboard"],
+};
 function render() {
   document.documentElement.lang = locale;
   el("lang").value = locale;
-  let html = "<h1>" + t(0) + '</h1><a href="index.html">' + t(27) + "</a>";
+  const pilot = location.protocol === "https:";
+  const ownerLink = '<a href="/admin">' + pilotCopy[locale][1] + '</a>';
+  let html = "<h1>" + t(0) + "</h1>";
+  if (!pilot) html += '<a href="/">' + t(27) + "</a> ";
+  if (me?.owner) html += ownerLink;
   if (!me)
     html +=
       "<article><h2>" +
       t(1) +
       "</h2><p>" +
-      t(2) +
+      (pilot ? pilotCopy[locale][0] : t(2)) +
       "</p>" +
       field(3, '<input id="email" value="demo-1@example.invalid">') +
       field(4, '<input id="pwd" type="password" autocomplete="off">') +
       field(5, '<input id="remember" type="checkbox">') +
       '<div class="actions">' +
-      button(6) +
-      button(7) +
-      "</div>" +
-      field(8, '<input id="code">') +
-      '<div class="actions">' +
-      button(9) +
-      button(10) +
-      button(11) +
+      (pilot
+        ? button(7)
+        : button(6) + button(7) + "</div>" + field(8, '<input id="code">') +
+          '<div class="actions">' + button(9) + button(10) + button(11)) +
       "</div></article>";
   else
     html +=
@@ -571,7 +576,7 @@ try {
   await refresh();
 } catch {}
 
-if ("serviceWorker" in navigator)
+if (location.protocol !== "https:" && "serviceWorker" in navigator)
   navigator.serviceWorker.register("./sw.js").catch(() => {});
 
 setInterval(() => {

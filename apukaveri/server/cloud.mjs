@@ -1,19 +1,27 @@
 import worker from "./worker.mjs";
+import { hasPilotAccess } from "./access.mjs";
 
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const local = ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
-    if (!local || env.MODE !== "synthetic") {
-      return new Response("Local test only", { status: 403 });
+    const pilot = env.MODE === "closed-pilot";
+    if (pilot ? !(await hasPilotAccess(request, env)) : !local || env.MODE !== "synthetic") {
+      return new Response("Access required", { status: 403, headers: { "Cache-Control": "no-store" } });
     }
 
     const serverEnv = {
-      MODE: env.MODE,
+      MODE: "synthetic",
       DB: env.DB,
-      deliver: (email, purpose, code) =>
-        console.log("TEST MAIL", email, purpose, code),
+      deliver: !pilot ? (email, purpose, code) =>
+        console.log("TEST MAIL", email, purpose, code) : undefined,
     };
+    if (pilot && ["/api/register", "/api/recover", "/api/verify", "/api/reset"].includes(url.pathname)) {
+      return Response.json({ error: "Use a provisioned pilot account" }, {
+        status: 404,
+        headers: { "Cache-Control": "no-store" },
+      });
+    }
     if (url.pathname.startsWith("/api/")) {
       return worker.fetch(request, serverEnv);
     }
@@ -33,11 +41,17 @@ export default {
 
     // Workers Assets can resolve encoded paths and extensionless HTML aliases.
     // Allow only known public URLs before forwarding to the binding.
+    if (pilot && !pilotPaths.has(url.pathname)) return new Response(null, { status: 404 });
     if (!publicPaths.has(url.pathname)) return new Response(null, { status: 404 });
     const asset = url.pathname === "/"
-      ? new Request(new URL("/index.html", url), request)
+      ? new Request(new URL(pilot ? "/sandbox.html" : "/index.html", url), request)
       : request;
-    return env.ASSETS.fetch(asset);
+    const response = await env.ASSETS.fetch(asset);
+    if (!pilot) return response;
+    const headers = new Headers(response.headers);
+    headers.set("Cache-Control", "private, no-store");
+    return new Response(response.body, { status: response.status, headers });
+
   },
 };
 
@@ -46,4 +60,10 @@ const publicPaths = new Set([
   "/location-select.mjs", "/finnish-cities.mjs", "/availability.mjs", "/helper-profile.js", "/sandbox.mjs", "/owner.mjs",
   "/profile-tools.mjs", "/helsinki.mjs", "/manifest.webmanifest", "/sw.js",
   "/logo.svg", "/icon192.png", "/icon512.png",
+]);
+
+const pilotPaths = new Set([
+  "/", "/sandbox.html", "/sandbox.mjs", "/owner.mjs",
+  "/availability.mjs", "/location-select.mjs", "/profile-tools.mjs",
+  "/helsinki.mjs", "/logo.svg", "/icon192.png", "/icon512.png",
 ]);

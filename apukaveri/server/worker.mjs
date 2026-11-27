@@ -19,7 +19,7 @@ const hex = (b) =>
   );
 const digest = async (s) =>
   hex(await crypto.subtle.digest("SHA-256", bytes.encode(s)));
-async function password(value, salt) {
+export async function password(value, salt) {
   const key = await crypto.subtle.importKey(
     "raw",
     bytes.encode(value),

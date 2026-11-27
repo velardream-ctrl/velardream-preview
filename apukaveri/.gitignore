@@ -2,3 +2,5 @@
 *.sqlite*
 /public-build/
 /server-build/
+
+/wrangler.pilot.jsonc
