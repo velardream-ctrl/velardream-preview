@@ -7,9 +7,14 @@ header nav{display:flex;flex-wrap:nowrap;align-items:center;gap:6px;white-space:
 .account-link{color:var(--brand);font-weight:700}
 @media(max-width:480px){
   header{gap:6px;flex-wrap:nowrap;justify-content:space-between;padding-inline:12px}
-  header .logo{gap:4px;font-size:17px;white-space:nowrap}
-  header .logo img{width:28px;height:28px}
-  #style{width:6.25rem;padding-inline:4px}
+  header .logo{flex:none;white-space:nowrap}
+  header nav{gap:4px}
+  #style{width:4.5rem;padding-inline:4px}
+  #language{padding-inline:4px}
+}
+@media(max-width:350px){
+  header{gap:3px;padding-inline:6px}
+  #style{width:4.25rem}
 }
 </style>
 <link rel="icon" href="logo.svg"><link rel="apple-touch-icon" href="icon192.png"></head>
@@ -51,7 +56,7 @@ const translations = {
     catalog: "Apukaverit", empty: "Julkaistuja auttajaprofiileja ei vielä ole.",
     status: "Valmistelemme palvelun avaamista. Rekisteröinti ja varaukset avataan myöhemmin.",
     intermediary: "Apukaveri on välitysalusta. Työn tekee valitsemasi tekijä.",
-    warm: "Tyyli: lämmin", blue: "Tyyli: sininen", sandbox: "Palvelintesti", account: "Oma Apukaveri",
+    warm: "Lämmin", blue: "Sininen", palette: "Vaihda väripalettia", sandbox: "Palvelintesti", account: "Oma Apukaveri",
   },
   ru: {
     headline: "Помощь рядом, когда она нужна.", intro: "Apukaveri помогает найти поддержку в повседневных делах.",
@@ -59,7 +64,7 @@ const translations = {
     catalog: "Каталог помощников", empty: "Опубликованных анкет помощников пока нет.",
     status: "Готовим сайт к запуску. Регистрация и заявки откроются позже.",
     intermediary: "Apukaveri — платформа-посредник. Работу выполняет выбранный вами исполнитель.",
-    warm: "Тёплая тема", blue: "Синяя тема", sandbox: "Серверный стенд", account: "Личный кабинет",
+    warm: "Тёплая", blue: "Синяя", palette: "Переключить цветовую тему", sandbox: "Серверный стенд", account: "Личный кабинет",
   },
   en: {
     headline: "Help nearby, when you need it.", intro: "Apukaveri helps you find support with everyday tasks.",
@@ -67,7 +72,7 @@ const translations = {
     catalog: "Find a helper", empty: "No helper profiles have been published yet.",
     status: "We are preparing to launch. Registration and bookings will open later.",
     intermediary: "Apukaveri is an intermediary platform. Your chosen helper performs the work.",
-    warm: "Theme: warm", blue: "Theme: blue", sandbox: "Server sandbox", account: "My account",
+    warm: "Warm", blue: "Blue", palette: "Switch colour theme", sandbox: "Server sandbox", account: "My account",
   },
 };
 const cats=[["child","🧸","Няня на час","Lastenhoito","Babysitting"],["elder","👵","Помощь пожилым","Ikäihmisten arkiapu","Companionship & errands"],["walk","🐕","Выгул собак","Koiran ulkoilutus","Dog walking"],["pet","🐈","Передержка животных","Lemmikkien hoito","Pet sitting"],["personal","🙋","Личный помощник","Arkiapu","Personal everyday help"],["home","🧹","Уборка и помощь по дому","Kotiapu","Household help"]];
@@ -116,7 +121,9 @@ function render() {
     el("serverLink").hidden = false;
   }
   el("language").value = lang;
-  el("style").textContent = document.body.classList.contains("modern") ? t.blue : t.warm;
+  const theme = el("style");
+  theme.textContent = document.body.classList.contains("modern") ? t.blue : t.warm;
+  theme.setAttribute("aria-label", t.palette + " · " + theme.textContent);
   const service = el("service");
   const selected = service.value;
   const labelIndex = { ru: 2, fi: 3, en: 4 }[lang];
