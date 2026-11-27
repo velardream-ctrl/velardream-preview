@@ -3,10 +3,11 @@
 .brand-link{display:inline-flex;align-items:center;gap:8px;color:inherit;text-decoration:none;font-weight:700}.brand-link:focus-visible{outline:3px solid #bf7620;outline-offset:4px;border-radius:4px}.language-choices{display:flex;flex-wrap:wrap;gap:4px 16px}.language-choices label{display:inline-flex;align-items:center;gap:5px;padding:6px 0;margin:0}.role-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:16px 0}.role-actions button{min-height:48px;background:#e8f1e6;color:#234735}.role-actions button[aria-selected=true]{background:#17684e;color:white}</style></head><body><header><a class="brand-link" href="/"><img src="logo.svg" alt="" width="32" height="32">Apukaveri</a><select id="lang" aria-label="Language" style="width:auto"><option value="fi">Suomi</option><option value="en">English</option><option value="ru">Русский</option></select></header><main><h1 data-t="title"></h1><p class="notice" data-t="notice"></p><div class="role-actions">
 <button type="button" data-tab="search" data-t="findHelp"></button>
 <button type="button" data-tab="helper" data-t="offerHelp"></button>
-</div><div class="layout"><nav id="nav" aria-label="Demo navigation"><button data-tab="profile" data-t="profile"></button><button data-tab="schedule" data-t="schedule"></button><button data-tab="search" data-t="search"></button><button hidden style="display:none" data-tab="owner" data-t="owner"></button><button data-tab="notifications" data-t="notifications"></button></nav><div><section id="profile"><div id="helperSummary" class="result" hidden><strong id="helperTitle"></strong><p id="helperService"></p></div><h2 data-t="profile"></h2><div class="row"><div class="avatar" id="avatar">☺</div><div><label><span data-t="photo"></span><input type="file" id="photo" accept="image/jpeg,image/png,image/webp"></label><span class="muted" data-t="photoNote"></span></div></div><div class="pair"><label><span data-t="name"></span><input value="Aino (demo)" id="name" maxlength="80"></label><label><span data-t="city"></span><select id="city"><option>Kitee</option><option>Joensuu</option><option>Savonlinna</option><option>Porvoo</option></select></label></div><fieldset><legend data-t="languages"></legend><div id="languages" class="language-choices"></div></fieldset><label><span data-t="description"></span><textarea id="description" rows="3" maxlength="500"></textarea></label><label><span data-t="phone"></span><input id="phone" type="tel" autocomplete="tel" maxlength="32"></label><p class="muted" data-t="privacy"></p><button id="profilePreview" data-t="saveProfile"></button> <button id="removePhoto" data-t="removePhoto"></button><div id="profileResult" class="result hidden" role="status"></div></section>
+</div><div class="layout"><nav id="nav" aria-label="Demo navigation"><button data-tab="profile" data-t="profile"></button><button data-tab="schedule" data-t="schedule"></button><button data-tab="search" data-t="search"></button><button hidden style="display:none" data-tab="owner" data-t="owner"></button><button data-tab="notifications" data-t="notifications"></button></nav><div><section id="profile"><div id="helperSummary" class="result" hidden><strong id="helperTitle"></strong><ul id="helperService"></ul></div><h2 data-t="profile"></h2><div class="row"><div class="avatar" id="avatar">☺</div><div><label><span data-t="photo"></span><input type="file" id="photo" accept="image/jpeg,image/png,image/webp"></label><span class="muted" data-t="photoNote"></span></div></div><div class="pair"><label><span data-t="name"></span><input value="Aino (demo)" id="name" maxlength="80"></label><label><span data-t="city"></span><select id="city"><option>Kitee</option><option>Joensuu</option><option>Savonlinna</option><option>Porvoo</option></select></label></div><fieldset><legend data-t="languages"></legend><div id="languages" class="language-choices"></div></fieldset><label><span data-t="description"></span><textarea id="description" rows="3" maxlength="500"></textarea></label><label><span data-t="phone"></span><input id="phone" type="tel" autocomplete="tel" maxlength="32"></label><p class="muted" data-t="privacy"></p><button id="profilePreview" data-t="saveProfile"></button> <button id="removePhoto" data-t="removePhoto"></button><div id="profileResult" class="result hidden" role="status"></div></section>
 <section id="schedule" class="hidden"><h2 data-t="schedule"></h2><p data-t="weekly"></p><div id="days"></div><h2 style="margin-top:20px" data-t="exceptions"></h2><p data-t="exceptionNote"></p><label><span data-t="date"></span><input type="date" id="exDate" value="2026-12-14"></label><label><span data-t="dayMode"></span><select id="exMode"><option value="closed" data-t="closed"></option><option value="open" data-t="custom"></option></select></label><div class="pair"><label><span data-t="from"></span><input id="exStart" type="time" value="18:00"></label><label><span data-t="to"></span><input id="exEnd" type="time" value="21:00"></label></div><div class="row"><button id="saveException" data-t="add"></button><button id="clearException" data-t="remove"></button></div><div id="exceptionsList" class="muted"></div><p id="scheduleStatus" role="status"></p></section>
 <section id="helper" class="hidden">
 <h2 data-t="offerHelp"></h2><p data-t="helperLocal"></p>
+<h3 data-t="myServices"></h3><ul id="savedServices"></ul>
 <label><span data-t="serviceLabel"></span><select id="helperCategory" required></select></label>
 <label><span data-t="rateLabel"></span><input id="helperRate" type="number" min="0" max="200" step="1" required value="20"></label>
 <button id="saveService" data-t="saveService"></button>
@@ -30,11 +31,11 @@ const copyKeys = ["saveProfile", "removePhoto", "saved", "saveError", "notificat
 for (const locale of Object.keys(localCopy)) {
   copyKeys.forEach((key, index) => { words[locale][key] = localCopy[locale][index]; });
 }
-const roleKeys = ["findHelp", "offerHelp", "helperLocal", "serviceLabel", "rateLabel", "saveService", "browseServices"];
+const roleKeys = ["findHelp", "offerHelp", "helperLocal", "serviceLabel", "rateLabel", "saveService", "browseServices", "myServices", "noServices", "editService", "removeService"];
 const roleCopy = {
-  fi: ["Etsin apua", "Tarjoan apua", "Valitse palvelu ja tuntihinta. Tiedot jäävät tähän selaimeen.", "Palvelu", "Tuntihinta (€)", "Tallenna palvelu", "Katso palvelut ja kaupungit"],
-  ru: ["Ищу помощь", "Предлагаю помощь", "Выберите услугу и цену за час. Данные сохраняются в этом браузере.", "Услуга", "Цена за час (€)", "Сохранить услугу", "Посмотреть услуги и города"],
-  en: ["Find help", "Offer help", "Choose a service and an hourly rate. These details stay in this browser.", "Service", "Hourly rate (€)", "Save service", "Browse services and cities"],
+  fi: ["Etsin apua", "Tarjoan apua", "Lisää palvelut yksitellen ja määritä jokaiselle tuntihinta.", "Palvelu", "Tuntihinta (€)", "Tallenna palvelu", "Katso palvelut ja kaupungit", "Omat palvelut", "Ei tallennettuja palveluita.", "Muokkaa", "Poista"],
+  ru: ["Ищу помощь", "Предлагаю помощь", "Добавляйте услуги по одной. У каждой может быть своя цена.", "Услуга", "Цена за час (€)", "Сохранить услугу", "Посмотреть услуги и города", "Мои услуги", "Пока нет сохранённых услуг.", "Изменить", "Удалить"],
+  en: ["Find help", "Offer help", "Add services one at a time and set an hourly rate for each.", "Service", "Hourly rate (€)", "Save service", "Browse services and cities", "My services", "No saved services yet.", "Edit", "Remove"],
 };
 for (const locale of Object.keys(roleCopy)) {
   roleKeys.forEach((key, index) => { words[locale][key] = roleCopy[locale][index]; });
@@ -42,23 +43,70 @@ for (const locale of Object.keys(roleCopy)) {
 const languageColumn = { ru: 2, fi: 3, en: 4 };
 const serviceChoice = $("helperCategory");
 const rateChoice = $("helperRate");
-const storedService = helperProfile.read();
-if (storedService) rateChoice.value = storedService.rate;
+function updateRate() {
+  const stored = helperProfile.read().find(item => item.service === serviceChoice.value);
+  rateChoice.readOnly = serviceChoice.value === "neighbor";
+  rateChoice.value = rateChoice.readOnly ? 0 : stored?.rate ?? 20;
+}
 function renderServiceChoices() {
-  const selected = serviceChoice.value || storedService?.service;
+  const selected = serviceChoice.value || helperProfile.read()[0]?.service;
   serviceChoice.replaceChildren(...serviceCategories.map(category =>
     new Option(category[1] + " " + category[languageColumn[lang]], category[0]),
   ));
   if (selected && serviceCategories.some(category => category[0] === selected)) {
     serviceChoice.value = selected;
   }
-  if (serviceChoice.value === "neighbor") rateChoice.value = 0;
-  rateChoice.readOnly = serviceChoice.value === "neighbor";
+  updateRate();
 }
-serviceChoice.onchange = () => {
-  rateChoice.readOnly = serviceChoice.value === "neighbor";
-  if (rateChoice.readOnly) rateChoice.value = 0;
-};
+serviceChoice.onchange = updateRate;
+function renderSavedServices() {
+  const saved = helperProfile.read();
+  $("helperSummary").hidden = saved.length === 0;
+  $("helperTitle").textContent = t("myServices");
+  $("helperService").replaceChildren();
+  $("savedServices").replaceChildren();
+  if (!saved.length) {
+    const empty = document.createElement("li");
+    empty.textContent = t("noServices");
+    $("savedServices").append(empty);
+  }
+  const euro = new Intl.NumberFormat(lang, {style:"currency", currency:"EUR"});
+  for (const item of saved) {
+    const name = item.labels[lang];
+    const text = name + " · " + euro.format(item.rate) + " / " + (lang === "ru" ? "ч" : "h");
+    const summary = document.createElement("li");
+    summary.textContent = text;
+    $("helperService").append(summary);
+    const row = document.createElement("li");
+    row.append(text + " ");
+    const edit = document.createElement("button");
+    edit.type = "button";
+    edit.textContent = t("editService");
+    edit.setAttribute("aria-label", t("editService") + " — " + name);
+    edit.onclick = () => {
+      serviceChoice.value = item.service;
+      updateRate();
+      (rateChoice.readOnly ? serviceChoice : rateChoice).focus();
+    };
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.textContent = t("removeService");
+    remove.setAttribute("aria-label", t("removeService") + " — " + name);
+    remove.onclick = () => {
+      try {
+        helperProfile.remove(item.service);
+        renderSavedServices();
+        updateRate();
+        serviceChoice.focus();
+        $("helperStatus").textContent = t("saved");
+      } catch {
+        $("helperStatus").textContent = t("saveError");
+      }
+    };
+    row.append(edit, " ", remove);
+    $("savedServices").append(row);
+  }
+}
 $("saveService").onclick = () => {
   const category = serviceCategories.find(item => item[0] === serviceChoice.value);
   if (!category || !rateChoice.reportValidity()) return;
@@ -148,9 +196,7 @@ function renderExceptions(){$("exceptionsList").textContent=Object.entries(sched
 function render(){
  renderServiceChoices();
  showLanguageChoices($("languages"), lang);
- const saved=helperProfile.read(),w=helperProfile.words[lang];
- $("helperSummary").hidden=!saved;
- if(saved){$("helperTitle").textContent=w[5];$("helperService").textContent=saved.labels[lang]+" · "+new Intl.NumberFormat(lang,{style:"currency",currency:"EUR"}).format(saved.rate)+" / "+(lang==="ru"?"ч":"h");}
+ renderSavedServices();
 document.documentElement.lang=lang;$("lang").value=lang;document.querySelectorAll("[data-t]").forEach(e=>e.textContent=t(e.dataset.t));renderDays();renderExceptions();$("ownerMenu").replaceChildren();t("tiles").forEach(x=>{const e=document.createElement("div");e.className="tile";e.textContent=x;$("ownerMenu").append(e)});$("queryResult").textContent="";$("profileResult").classList.add("hidden")}
 function tab(id, scroll = false) {
   document.querySelectorAll("section").forEach(e => e.classList.toggle("hidden", e.id !== id));
