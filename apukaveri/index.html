@@ -1,23 +1,60 @@
 <!doctype html>
-<html lang="fi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Apukaveri — demo</title><style>
+<html lang="fi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Apukaveri</title><style>
 *{box-sizing:border-box}body{--ink:#243c35;--muted:#5f6e66;--brand:#176a54;--bg:#f6f8f2;--soft:#e3efdf;--card:#fff;--accent:#f6d9ac;margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,sans-serif}body.modern{--ink:#142b45;--muted:#536881;--brand:#285eb2;--bg:#f0f5ff;--soft:#dfeaff;--accent:#d5e4ff}button,input,select{font:inherit}button{cursor:pointer;border:0;border-radius:12px;padding:12px 17px;background:var(--brand);color:white;font-weight:650}button.secondary{background:var(--soft);color:var(--ink)}button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{outline:3px solid #bf7620;outline-offset:3px}header,main,footer{max-width:1180px;margin:auto;padding:18px 24px}header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.logo{display:inline-flex;align-items:center;gap:8px;text-decoration:none;font-weight:850;font-size:25px;color:var(--brand);letter-spacing:-1px}.logo span{display:inline-grid;place-items:center;background:var(--soft);border-radius:13px;width:43px;height:43px;margin-right:7px}nav{display:flex;gap:8px;flex-wrap:wrap}small,.muted{color:var(--muted)}.notice{font-size:13px;background:var(--soft);border-radius:10px;padding:10px 14px}.hero{padding:clamp(24px,5vw,60px);border-radius:28px;background:var(--soft);display:grid;grid-template-columns:1.35fr .85fr;gap:28px;align-items:center;margin:18px 0 30px}.eyebrow{font-size:13px;text-transform:uppercase;letter-spacing:1.5px;font-weight:750;color:var(--brand)}h1{font-size:clamp(34px,5vw,60px);line-height:1.08;letter-spacing:-2px;margin:12px 0 16px}h2{font-size:25px;letter-spacing:-.6px;margin:28px 0 12px}p{margin:0 0 14px}.art{display:grid;grid-template-columns:1fr 1fr;gap:10px;transform:rotate(-3deg)}.art div{background:var(--card);border-radius:25px;min-height:100px;display:grid;place-items:center;font-size:50px;box-shadow:0 10px 30px #00000009}.art div:nth-child(2),.art div:nth-child(3){background:var(--accent)}.filters{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr auto;gap:10px;background:white;padding:14px;border-radius:16px;margin-top:22px}.field{display:grid;gap:5px;font-size:13px;font-weight:650}input,select{min-width:0;width:100%;border:1px solid #becdc5;border-radius:10px;padding:10px;background:white;color:#243c35}.filters button{align-self:end}.categories{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}.cat{background:white;color:var(--ink);text-align:left;min-height:114px;padding:14px;border:2px solid transparent;box-shadow:0 3px 16px #00000005}.cat.active{border-color:var(--brand);background:var(--soft)}.cat span{display:block;font-size:28px;margin-bottom:5px}.catalog{display:grid;grid-template-columns:repeat(3,1fr);gap:15px}.person,.panel{background:var(--card);border-radius:20px;padding:20px;border:1px solid #dfe7df}.avatar{width:56px;height:56px;display:grid;place-items:center;background:var(--soft);border-radius:50%;font-size:26px;color:var(--brand);font-weight:750}.person h3{margin:12px 0 3px;font-size:20px}.pill{display:inline-block;background:var(--soft);color:var(--brand);font-size:12px;font-weight:650;padding:4px 8px;border-radius:7px;margin:6px 0}.person button{width:100%;margin-top:12px}.price{font-size:25px;font-weight:750;color:var(--brand)}.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.steps strong{display:block;color:var(--brand);font-size:18px;margin-bottom:8px}.split{display:grid;grid-template-columns:1fr 1fr;gap:16px}dialog{border:0;border-radius:20px;width:min(500px,calc(100% - 30px));padding:24px;color:var(--ink);box-shadow:0 10px 60px #0003}dialog::backdrop{background:#122522aa}dialog h2{margin:0 0 12px}dialog .field{margin:12px 0}.line{display:flex;justify-content:space-between;gap:10px;margin:8px 0}.total{border-top:1px solid #dce5de;padding-top:10px;font-weight:750}.actions{display:flex;gap:8px;flex-wrap:wrap}.hidden{display:none!important}footer{font-size:13px;color:var(--muted)}@media(max-width:800px){.hero{grid-template-columns:1fr}.art{display:none}.categories{grid-template-columns:repeat(3,1fr)}.catalog{grid-template-columns:repeat(2,1fr)}.filters{grid-template-columns:1fr 1fr}.steps{grid-template-columns:1fr}.split{grid-template-columns:1fr}}@media(max-width:480px){header,main,footer{padding:12px 14px}.hero{padding:22px;border-radius:20px}.categories{grid-template-columns:repeat(2,1fr)}.catalog{grid-template-columns:1fr}.filters{grid-template-columns:1fr}.logo{font-size:22px}nav button{padding:9px;font-size:13px}h1{letter-spacing:-1px}}
-</style><link rel="icon" href="logo.svg"><link rel="apple-touch-icon" href="icon192.png"></head><body><header><a class="logo" href="/"><img src="logo.svg" alt="" width="40" height="40">Apukaveri</a><nav><a id="serverLink" href="sandbox.html" hidden></a><a id="accountLink" href="account.html" style="align-self:center;color:var(--brand);font-weight:700"></a><select id="language" aria-label="Language" style="width:auto"><option value="fi">Suomi</option><option value="ru">Русский</option><option value="en">English</option></select><button class="secondary" id="style"></button><button id="join"></button><button class="secondary" id="admin" hidden style="display:none"></button></nav></header><main>
-<div class="notice" data-t="notice"></div><section class="hero"><div><div class="eyebrow" data-t="eyebrow"></div><h1 data-t="headline"></h1><p data-t="intro"></p><div class="actions"><button id="browse" data-t="browse"></button><button class="secondary" id="heroJoin" data-t="join"></button></div></div><div class="art" aria-hidden="true"><div>🧸</div><div>🐕</div><div>🛍️</div><div>🌱</div></div></section>
-<section class="panel"><h2 id="dispatchTitle"></h2><p id="dispatchText"></p><a id="dispatchLink" href="dispatch.html" style="color:var(--brand);font-weight:700"></a></section><h2 data-t="categories"></h2><div id="categories" class="categories"></div>
-<div class="filters"><label class="field"><span data-t="service"></span><select id="service"></select></label><label class="field"><span id="municipalityLabel"></span><select id="municipality"></select></label><label class="field"><span data-t="city"></span><select id="city"></select></label><label class="field"><span data-t="when"></span><input id="date" type="date"></label><button id="find" data-t="find"></button></div>
-<h2 id="catalogTitle" tabindex="-1" data-t="catalog"></h2><p class="muted" id="count" role="status"></p><div id="catalog" class="catalog"></div>
-<h2 data-t="how"></h2><div class="steps"><div class="panel"><strong data-t="step1"></strong><span data-t="desc1"></span></div><div class="panel"><strong data-t="step2"></strong><span data-t="desc2"></span></div><div class="panel"><strong data-t="step3"></strong><span data-t="desc3"></span></div></div>
-<h2 data-t="trust"></h2><div class="split"><div class="panel"><b data-t="verify"></b><p data-t="verifydesc"></p></div><div class="panel"><b data-t="safe"></b><p data-t="safedesc"></p></div></div>
-<section id="provider" class="hidden panel"><h2 data-t="join"></h2><p data-t="providerDesc"></p><label class="field"><span data-t="service"></span><select id="providerService"></select></label><label class="field"><span data-t="rate"></span><input type="number" id="providerRate" required value="20" min="0" max="200"></label><button id="providerDemo"></button><p id="providerStatus" role="status"></p><a hidden id="helperAccount" href="account.html"></a></section>
-<section id="adminPanel" class="hidden panel"><h2 data-t="admin"></h2><p data-t="adminDesc"></p><label class="field"><span data-t="commission"></span><input id="fee" type="number" min="0" max="30" value="15"></label><p id="feePreview" role="status"></p></section>
-</main><footer data-t="footer"></footer>
-<dialog id="booking"><h2 data-t="booking"></h2><p id="selected"></p><form id="bookingForm"><label class="field"><span data-t="when"></span><input type="date" id="bookDate" required></label><label class="field"><span data-t="time"></span><input type="time" id="bookTime" value="12:00" required></label><label class="field"><span data-t="hours"></span><select id="hours"><option>1</option><option selected>2</option><option>3</option><option>4</option><option>6</option><option>8</option><option>12</option><option>24</option></select></label><div id="breakdown"></div><div class="actions"><button type="submit" data-t="demoSubmit"></button><button type="button" class="secondary" id="close" data-t="close"></button></div><p id="status" role="status"></p></form></dialog>
-<script src="helper-profile.js"></script><script type="module">
+</style>
+<link rel="icon" href="logo.svg"><link rel="apple-touch-icon" href="icon192.png"></head>
+<body>
+<header>
+  <a class="logo" href="/"><img src="logo.svg" alt="" width="40" height="40">Apukaveri</a>
+  <nav>
+    <a id="serverLink" href="sandbox.html" hidden></a>
+    <select id="language" aria-label="Language" style="width:auto">
+      <option value="fi">Suomi</option><option value="ru">Русский</option><option value="en">English</option>
+    </select>
+    <button class="secondary" id="style" type="button"></button>
+  </nav>
+</header>
+<main>
+  <section class="hero">
+    <div><h1 data-t="headline"></h1><p data-t="intro"></p></div>
+    <div class="art" aria-hidden="true"><div>🧸</div><div>🐕</div><div>🛍️</div><div>🌱</div></div>
+  </section>
+  <p class="notice" data-t="status"></p>
+  <h2 data-t="categories"></h2><div id="categories" class="categories"></div>
+  <div class="filters" style="grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr))">
+    <label class="field"><span data-t="service"></span><select id="service"></select></label>
+    <label class="field"><span id="municipalityLabel"></span><select id="municipality"></select></label>
+    <label class="field"><span data-t="city"></span><select id="city"></select></label>
+  </div>
+  <h2 id="catalogTitle" data-t="catalog"></h2><p class="panel muted" data-t="empty"></p>
+</main>
+<script type="module">
 import { finnishCities } from "./finnish-cities.mjs";
 import { setLocationSelects } from "./location-select.mjs";
-"use strict";
-const translations={ru:{notice:"ДЕМО • вымышленные анкеты, цены и доступность • реальные заказы и платежи отключены",eyebrow:"Повседневная помощь в Финляндии",headline:"Помощь рядом, когда она нужна.",intro:"Найдите человека, который присмотрит за ребёнком, погуляет с собакой или поможет в повседневных делах.",browse:"Найти помощника",categories:"Чем вам помочь?",service:"Услуга",city:"Город",when:"Дата (демо)",find:"Показать",catalog:"Каталог помощников",how:"Как это работает",step1:"1. Выберите помощь",desc1:"Укажите услугу, город и подходящее время.",step2:"2. Согласуйте детали",desc2:"Выберите анкету и отправьте запрос исполнителю.",step3:"3. Подтвердите заказ",desc3:"В будущей версии — защищённая оплата и отзыв после услуги.",trust:"Доверие прежде всего",verify:"Проверка исполнителей — план",verifydesc:"Проверка личности и законных требований до допуска к заказам, особенно при работе с детьми.",safe:"Безопасность и приватность — план",safedesc:"Закрытые контакты, поддержка, правила отмены, жалобы и страхование. Здесь пока нет настоящей проверки.",join:"Стать помощником",providerDesc:"Демонстрация будущей анкеты. Не вводите персональные данные.",rate:"Цена, €/ч",demoSubmit:"Проверить демо-заявку",admin:"Демо-админка",adminDesc:"Локальный калькулятор комиссии, не настоящая защищённая админка.",commission:"Комиссия платформы, % (0–30)",footer:"Apukaveri • RUN-003 • независимый макет • без сервера, платежей и сбора данных",booking:"Демонстрационная заявка",time:"Время (Финляндия)",hours:"Часы",close:"Закрыть",all:"Все услуги",allCities:"Все города",style:"Дизайн: тёплый",modern:"Дизайн: синий",demoProfile:"Вымышленный профиль",book:"Выбрать",results:"Найдено анкет: ",none:"Нет анкет по фильтрам.",gross:"Стоимость услуги",platform:"Комиссия платформы (из стоимости)",net:"Исполнителю до налогов и расходов",done:"Демо рассчитано. Ничего не отправлено и не оплачено.",invalid:"Проверьте дату и время.",feeExample:"При заказе на 40 €: ",providerDone:"Демо анкеты проверено. Данные не сохранены.",dateNote:"Доступность условная; календарь ещё не подключён."},fi:{notice:"DEMO • kuvitteelliset profiilit, hinnat ja saatavuus • ei oikeita varauksia tai maksuja",eyebrow:"Arjen apua Suomessa",headline:"Apua lähellä, kun sitä tarvitset.",intro:"Löydä apua lastenhoitoon, koiran ulkoilutukseen ja arjen askareisiin.",browse:"Etsi apukaveri",categories:"Mihin tarvitset apua?",service:"Palvelu",city:"Kaupunki",when:"Päivä (demo)",find:"Näytä",catalog:"Apukaverit",how:"Näin se toimii",step1:"1. Valitse palvelu",desc1:"Valitse palvelu, kaupunki ja sopiva aika.",step2:"2. Sovi yksityiskohdista",desc2:"Valitse profiili ja lähetä pyyntö tekijälle.",step3:"3. Vahvista tilaus",desc3:"Tulevaisuudessa turvallinen maksu ja palaute.",trust:"Luottamus ensin",verify:"Tekijöiden tarkistus — suunnitteilla",verifydesc:"Henkilöllisyys ja lakisääteiset vaatimukset tarkistetaan ennen oikeita tilauksia.",safe:"Turvallisuus ja yksityisyys — suunnitteilla",safedesc:"Suojatut yhteystiedot, tuki, peruutukset, reklamaatiot ja vakuutukset. Ei oikeita tarkistuksia demossa.",join:"Ryhdy apukaveriksi",providerDesc:"Kuvitteellinen hakemus. Älä anna henkilötietoja.",rate:"Hinta, €/h",demoSubmit:"Testaa demopyyntö",admin:"Demo-hallinta",adminDesc:"Paikallinen laskuri, ei oikea hallintapaneeli.",commission:"Palvelumaksu, % (0–30)",footer:"Apukaveri • RUN-003 • itsenäinen demo • ei palvelinta, maksuja tai tiedonkeruuta",booking:"Demovaraus",time:"Aika (Suomi)",hours:"Tunnit",close:"Sulje",all:"Kaikki palvelut",allCities:"Kaikki kaupungit",style:"Tyyli: lämmin",modern:"Tyyli: sininen",demoProfile:"Kuvitteellinen profiili",book:"Valitse",results:"Profiileja: ",none:"Ei hakutuloksia.",gross:"Palvelun hinta",platform:"Palvelumaksu hinnasta",net:"Tekijälle ennen veroja ja kuluja",done:"Demo laskettu. Mitään ei lähetetty eikä maksettu.",invalid:"Tarkista päivä ja aika.",feeExample:"40 € tilauksesta: ",providerDone:"Demohakemus tarkistettu. Ei tallennettu.",dateNote:"Saatavuus on kuvitteellinen; kalenteria ei ole kytketty."}};
-translations.en={"notice":"DEMO • fictional profiles, prices and availability • no real bookings or payments","eyebrow":"Everyday help in Finland","headline":"Help nearby, when you need it.","intro":"Find someone to look after your child, walk your dog or help with everyday tasks.","browse":"Find a helper","categories":"What do you need help with?","service":"Service","city":"City","when":"Date (demo)","find":"Show helpers","catalog":"Find a helper","how":"How it works","step1":"1. Choose a service","desc1":"Select a service, city and suitable time.","step2":"2. Agree on the details","desc2":"Choose a profile and request a booking.","step3":"3. Confirm your booking","desc3":"Future version: secure payment and a review after completion.","trust":"Trust comes first","verify":"Helper verification — planned","verifydesc":"Identity and legal requirements must be checked before real bookings, especially childcare.","safe":"Safety and privacy — planned","safedesc":"Private contact details, support, cancellation, complaints and insurance. No real checks in this demo.","join":"Become a helper","providerDesc":"Try the future application. Do not enter personal information.","rate":"Rate, €/hour","demoSubmit":"Test demo request","admin":"Demo admin","adminDesc":"Local commission calculator, not an authenticated admin panel.","commission":"Platform commission, % (0–30)","footer":"Apukaveri • RUN-003 • independent demo • no server, payments or personal data collection","booking":"Demo booking","time":"Time (Finland)","hours":"Hours","close":"Close","all":"All services","allCities":"All cities","style":"Style: warm","modern":"Style: blue","demoProfile":"Fictional profile","book":"Select","results":"Profiles found: ","none":"No matching profiles.","gross":"Service price","platform":"Platform commission (included)","net":"Helper receives before taxes and expenses","done":"Demo calculated. Nothing was sent or paid.","invalid":"Please check the date and time.","feeExample":"For a €40 order: ","providerDone":"Demo application checked. No data saved.","dateNote":"Availability is fictional; calendar not connected."};
+
+const translations = {
+  fi: {
+    headline: "Apua lähellä, kun sitä tarvitset.", intro: "Apukaveri auttaa löytämään apua arjen askareisiin.",
+    categories: "Mihin tarvitset apua?", service: "Palvelu", all: "Kaikki palvelut", city: "Kaupunki",
+    catalog: "Apukaverit", empty: "Julkaistuja auttajaprofiileja ei vielä ole.",
+    status: "Valmistelemme palvelun avaamista. Rekisteröinti ja varaukset avataan myöhemmin.",
+    warm: "Tyyli: lämmin", blue: "Tyyli: sininen", sandbox: "Palvelintesti",
+  },
+  ru: {
+    headline: "Помощь рядом, когда она нужна.", intro: "Apukaveri помогает найти поддержку в повседневных делах.",
+    categories: "Чем вам помочь?", service: "Услуга", all: "Все услуги", city: "Город",
+    catalog: "Каталог помощников", empty: "Опубликованных анкет помощников пока нет.",
+    status: "Готовим сайт к запуску. Регистрация и заявки откроются позже.",
+    warm: "Дизайн: тёплый", blue: "Дизайн: синий", sandbox: "Серверный стенд",
+  },
+  en: {
+    headline: "Help nearby, when you need it.", intro: "Apukaveri helps you find support with everyday tasks.",
+    categories: "What do you need help with?", service: "Service", all: "All services", city: "City",
+    catalog: "Find a helper", empty: "No helper profiles have been published yet.",
+    status: "We are preparing to launch. Registration and bookings will open later.",
+    warm: "Theme: warm", blue: "Theme: blue", sandbox: "Server sandbox",
+  },
+};
 const cats=[["child","🧸","Няня на час","Lastenhoito","Babysitting"],["elder","👵","Помощь пожилым","Ikäihmisten arkiapu","Companionship & errands"],["walk","🐕","Выгул собак","Koiran ulkoilutus","Dog walking"],["pet","🐈","Передержка животных","Lemmikkien hoito","Pet sitting"],["personal","🙋","Личный помощник","Arkiapu","Personal everyday help"],["home","🧹","Уборка и помощь по дому","Kotiapu","Household help"]];
 cats.push(...[["errands","🛍️","Покупки и поручения","Asiointiapu","Shopping & errands"],["delivery","📦","Доставка","Kuljetusapu","Delivery help"],["ride","🚗","Попутчики","Kimppakyyti","Carpooling"],["cook","🍲","Приготовление еды","Ruoanlaitto","Cooking"],["garden","🌱","Сад и двор","Pihatyöt","Garden & yard"],["digital","💻","Компьютерная помощь","Digituki","Digital help"],["neighbor","🤝","Добрые дела","Naapuriapu","Neighbourly help"],
   ["repairs","🛠️","Сборка мебели и мелкий ремонт","Huonekalujen kokoaminen ja pienkorjaukset","Furniture assembly and minor repairs"],
@@ -26,51 +63,70 @@ cats.push(...[["errands","🛍️","Покупки и поручения","Asioi
   ["sewing","🪡","Ремонт и пошив одежды","Vaatteiden korjaus ja ompelu","Clothing alterations and sewing"],
   ["housewatch","🏡","Уход за домом в отъезде","Kodin hoito poissa ollessa","Home care while away"]
 ]);
-const profiles=[["Aino","Kitee","child",20,"FI • EN"],["Mika","Joensuu","walk",15,"FI"],["Sofia","Kitee","elder",23,"FI • RU"],["Emma","Porvoo","pet",18,"FI • EN"],["Alex","Joensuu","personal",22,"FI • RU • EN"],["Laura","Porvoo","home",25,"FI • EN"],["Nina","Joensuu","child",24,"FI • RU"],["Olli","Kitee","home",21,"FI"]];
-profiles.push(["Elli","Joensuu","errands",18,"FI"],["Leo","Kitee","neighbor",0,"FI • EN"],["Sami","Joensuu","digital",20,"FI • EN"]);
-profiles.push(
-  ["Eero","Kitee","repairs",25,"FI • EN"],
-  ["Joonas","Joensuu","moving",22,"FI"],
-  ["Alina","Kitee","language",18,"FI • RU • EN"],
-  ["Helmi","Porvoo","sewing",24,"FI • EN"],
-  ["Vilma","Joensuu","housewatch",16,"FI • EN"]
-);
-let lang="fi",chosen=null;try{const saved=localStorage.getItem("apukaveri-demo-language");if(["fi","ru","en"].includes(saved))lang=saved}catch{}const $=id=>document.getElementById(id),t=k=>translations[lang][k],label=c=>c[lang==="ru"?2:lang==="fi"?3:4],money=n=>new Intl.NumberFormat(lang==="ru"?"ru-FI":lang==="fi"?"fi-FI":"en-FI",{style:"currency",currency:"EUR"}).format(n);
-// Reused from Pakkasukko src/validation.js (blob 4c347677fa2b1cca1de529dea9be26564cfa8388): calendar stamp validation.
-function validStamp(s){
- if(typeof s!=='string'||!/^20\d{2}-(0[1-9]|1[0-2])-([0-2]\d|3[01])T([01]\d|2[0-3]):[0-5]\d$/.test(s))return false;
- const date=new Date(s+':00Z');return !Number.isNaN(date.getTime())&&date.toISOString().slice(0,16)===s;
-}
-function amounts(rate,h,fee){const cents=Math.round(rate*h*100),cut=Math.round(cents*fee/100);return [cents/100,cut/100,(cents-cut)/100]}
-function fee(){const n=Number($("fee").value);return Number.isFinite(n)?Math.max(0,Math.min(30,n)):15}
-function populate(el,options){const old=el.value;el.replaceChildren();options.forEach(([v,l])=>el.add(new Option(l,v)));if(options.some(a=>a[0]===old))el.value=old}
-function today(){return new Intl.DateTimeFormat("sv-SE",{timeZone:"Europe/Helsinki",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date())}
-function render(){if(["127.0.0.1","localhost"].includes(location.hostname)&&location.port==="8787"){$("serverLink").hidden=false;$("serverLink").textContent={fi:"Testipalvelu",ru:"Серверный стенд",en:"Server sandbox"}[lang]}$("accountLink").textContent={fi:"Oma Apukaveri",ru:"Мой кабинет",en:"My account"}[lang];const d={fi:["Apua nyt","Kokeile kiireellistä pyyntöä, ilmoituksia ja maksutonta apua.","Avaa tilausdemo →"],ru:["Помощь сейчас","Испытайте срочную заявку, объявления и бесплатную помощь.","Открыть диспетчерскую →"],en:["Help now","Try urgent requests, listings and free help.","Open dispatch demo →"]}[lang];["dispatchTitle","dispatchText","dispatchLink"].forEach((id,i)=>$(id).textContent=d[i]);document.documentElement.lang=lang;document.querySelectorAll("[data-t]").forEach(e=>e.textContent=t(e.dataset.t));$("language").value=lang;$("style").textContent=t(document.body.classList.contains("modern")?"modern":"style");$("join").textContent=t("join");$("admin").textContent=t("admin");populate($("service"),[["",t("all")],...cats.map(c=>[c[0],c[1]+" "+label(c)])]);setLocationSelects({municipality:$("municipality"),city:$("city"),label:$("municipalityLabel"),locations:finnishCities,locale:lang,onChange:renderCatalog});populate($("providerService"),cats.map(c=>[c[0],c[1]+" "+label(c)]));renderCatalog();updateFee();helperLabels()}
-function filtered(service,city){return profiles.filter(p=>(!service||p[2]===service)&&(!city||p[1]===city))}
-function renderCatalog(){const service=$("service").value,city=$("city").value||finnishCities.find(c=>c.id===$("municipality").value)?.city;let cs=$("categories");cs.replaceChildren();cats.forEach(c=>{let b=document.createElement("button");b.className="cat"+(service===c[0]?" active":"");b.setAttribute("aria-pressed",String(service===c[0]));let s=document.createElement("span");s.setAttribute("aria-hidden","true");s.textContent=c[1];b.append(s,document.createTextNode(label(c)));b.onclick=()=>{$("service").value=service===c[0]?"":c[0];renderCatalog()};cs.append(b)});const found=filtered(service,city);$("count").textContent=t("results")+found.length+" · "+t("dateNote");let root=$("catalog");root.replaceChildren();if(!found.length){root.textContent=t("none");return}found.forEach(p=>{const el=document.createElement("article");el.className="person";const c=cats.find(x=>x[0]===p[2]);el.innerHTML='<div class="avatar" aria-hidden="true">'+p[0][0]+'</div><h3>'+p[0]+'</h3><div class="muted">'+p[1]+' · '+p[4]+'</div><span class="pill">'+t("demoProfile")+'</span><p>'+label(c)+'</p><span class="price">'+money(p[3])+'</span> / '+(lang==="ru"?"ч":"h");let b=document.createElement("button");b.textContent=t("book");b.onclick=()=>openBooking(p);el.append(b);root.append(el)})}
-function openBooking(p){chosen=p;$("selected").textContent=p[0]+" · "+p[1]+" · "+label(cats.find(c=>c[0]===p[2]));$("bookDate").min=today();$("bookDate").value=$("date").value||today();$("status").textContent="";updateBooking();$("booking").showModal()}
-function updateBooking(){if(!chosen)return;const a=amounts(chosen[3],Number($("hours").value),fee());$("breakdown").replaceChildren();["gross","platform","net"].forEach((k,i)=>{let row=document.createElement("div");row.className="line"+(i===2?" total":"");let l=document.createElement("span"),r=document.createElement("strong");l.textContent=t(k);r.textContent=money(a[i]);row.append(l,r);$("breakdown").append(row)})}
-function updateFee(){const a=amounts(40,1,fee());$("feePreview").textContent=t("feeExample")+money(a[1])+" / "+money(a[2]);updateBooking()}
-$("date").min=today();$("language").onchange=()=>{lang=$("language").value;try{localStorage.setItem("apukaveri-demo-language",lang)}catch{}render()};$("style").onclick=()=>{document.body.classList.toggle("modern");render()};$("service").onchange=renderCatalog;$("find").onclick=()=>{renderCatalog();$("catalogTitle").scrollIntoView({behavior:"smooth"});$("catalogTitle").focus({preventScroll:true})};$("browse").onclick=()=>$("service").focus();$("join").onclick=()=>{$("provider").classList.toggle("hidden");$("provider").scrollIntoView()};$("heroJoin").onclick=()=>{$("provider").classList.remove("hidden");$("provider").scrollIntoView({behavior:"smooth"})};$("admin").onclick=()=>{$("adminPanel").classList.toggle("hidden");$("adminPanel").scrollIntoView()};$("fee").oninput=updateFee;$("hours").onchange=()=>{$("status").textContent="";updateBooking()};$("close").onclick=()=>$("booking").close();$("bookingForm").onsubmit=e=>{e.preventDefault();const d=$("bookDate").value,tm=$("bookTime").value;const now=new Intl.DateTimeFormat("sv-SE",{timeZone:"Europe/Helsinki",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(new Date());$("status").textContent=!validStamp(d+"T"+tm)||d<today()||(d===today()&&tm<now)?t("invalid"):t("done")};function helperLabels() {
-  const w=helperProfile.words[lang], saved=helperProfile.read();
-  $("providerDemo").textContent=w[0];
-  document.querySelector('[data-t="providerDesc"]').textContent=w[4];
-  if(saved) for(const id of ["join","heroJoin"]) $(id).textContent=w[1];
-  $("helperAccount").hidden=!saved;
-  $("helperAccount").textContent=w[6];
-  $("providerStatus").textContent=saved?w[2]:"";
-}
-$("providerDemo").onclick=()=>{
-  const w=helperProfile.words[lang], field=$("providerRate"), c=cats.find(c=>c[0]===$("providerService").value);
-  if(!c||!field.reportValidity()){ $("providerStatus").textContent=w[7]; return; }
-  try {
-    helperProfile.save({service:c[0],rate:field.valueAsNumber,labels:{ru:c[2],fi:c[3],en:c[4]}});
-    helperLabels();
-  } catch { $("providerStatus").textContent=w[3]; }
-};
-render();
-const storedHelper=helperProfile.read();
-if(storedHelper){$("providerService").value=storedHelper.service;$("providerRate").value=storedHelper.rate;}
-if(location.hash==="#provider"){$("provider").classList.remove("hidden");$("provider").scrollIntoView();}
 
-</script></body></html>
+const el = (id) => document.getElementById(id);
+let lang = "fi";
+try {
+  const saved = localStorage.getItem("apukaveri-demo-language");
+  if (Object.hasOwn(translations, saved)) lang = saved;
+} catch {}
+
+function renderCategories() {
+  const selected = el("service").value;
+  const labelIndex = { ru: 2, fi: 3, en: 4 }[lang];
+  el("categories").replaceChildren(...cats.map(([id, icon, ...labels]) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = id === selected ? "cat active" : "cat";
+    button.setAttribute("aria-pressed", String(id === selected));
+    const mark = document.createElement("span");
+    mark.setAttribute("aria-hidden", "true");
+    mark.textContent = icon;
+    button.append(mark, labels[labelIndex - 2]);
+    button.onclick = () => {
+      el("service").value = id === selected ? "" : id;
+      renderCategories();
+    };
+    return button;
+  }));
+}
+
+function render() {
+  const t = translations[lang];
+  document.documentElement.lang = lang;
+  document.querySelectorAll("[data-t]").forEach((node) => {
+    node.textContent = t[node.dataset.t];
+  });
+  if (["localhost", "127.0.0.1"].includes(location.hostname)) {
+    el("serverLink").hidden = false;
+    el("serverLink").textContent = t.sandbox;
+  }
+  el("language").value = lang;
+  el("style").textContent = document.body.classList.contains("modern") ? t.blue : t.warm;
+  const service = el("service");
+  const selected = service.value;
+  const labelIndex = { ru: 2, fi: 3, en: 4 }[lang];
+  service.replaceChildren(new Option(t.all, ""), ...cats.map((category) =>
+    new Option(category[1] + " " + category[labelIndex], category[0]),
+  ));
+  service.value = selected;
+  setLocationSelects({
+    municipality: el("municipality"), city: el("city"), label: el("municipalityLabel"),
+    locations: finnishCities, locale: lang,
+  });
+  renderCategories();
+}
+
+el("language").onchange = () => {
+  lang = el("language").value;
+  try { localStorage.setItem("apukaveri-demo-language", lang); } catch {}
+  render();
+};
+el("style").onclick = () => {
+  document.body.classList.toggle("modern");
+  render();
+};
+el("service").onchange = renderCategories;
+render();
+</script>
+</body></html>
