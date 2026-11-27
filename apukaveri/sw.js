@@ -5,6 +5,7 @@ const shell = [
   "sandbox.mjs",
   "location-select.mjs",
   "profile-tools.mjs",
+  "profile-languages.mjs",
   "helsinki.mjs",
   "logo.svg",
   "manifest.webmanifest",

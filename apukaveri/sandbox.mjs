@@ -1,3 +1,4 @@
+import { showLanguageChoices, readLanguageChoices } from "./profile-languages.mjs";
 import { setLocationSelects } from "./location-select.mjs";
 import { resolveHelsinki, helsinkiDate } from "./helsinki.mjs";
 import { uploadThumbnail, displayThumbnail } from "./profile-tools.mjs";
@@ -181,6 +182,8 @@ function render() {
         '<select id="city" required></select>',
       ) +
       field(14, '<select id="category"></select>') +
+      '<fieldset><legend>' + {fi:"Puhutut kielet",ru:"Языки общения",en:"Spoken languages"}[locale] +
+      '</legend><div id="spokenLanguages" class="actions"></div></fieldset>' +
       field(15, '<input id="available" type="checkbox">') +
       "<details><summary>" +
       t(53) +
@@ -275,6 +278,7 @@ function render() {
       required: true,
       selectedCity: me.city,
     });
+    showLanguageChoices(el("spokenLanguages"), locale, JSON.parse(me.languages || "[]"));
     el("available").checked = !!me.available;
   }
 }
@@ -499,6 +503,7 @@ el("app").onclick = async (e) => {
         city: val("city"),
         category: Number(val("category")),
         available: el("available").checked,
+        languages: readLanguageChoices(el("spokenLanguages")),
         schedule: draft,
       });
     if (i === 18 || i === 38 || i === 31 || e.target.dataset.book) {

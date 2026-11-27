@@ -85,6 +85,7 @@ if (import.meta.main) {
     "/sandbox.mjs": "sandbox.mjs",
     "/admin": "admin.html",
     "/owner.mjs": "owner.mjs",
+    "/profile-languages.mjs": "profile-languages.mjs",
     "/profile-tools.mjs": "profile-tools.mjs",
     "/helsinki.mjs": "helsinki.mjs",
     "/logo.svg": "logo.svg",

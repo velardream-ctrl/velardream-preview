@@ -1,3 +1,4 @@
+import { validLanguages } from "../profile-languages.mjs";
 import { finance } from "./finance.mjs";
 import {
   intervalsForDate,
@@ -297,6 +298,7 @@ export default {
         });
       if (path === "/api/profile" && post) {
         if (
+          (b.languages !== undefined && !validLanguages(b.languages)) ||
           !/^Demo [0-9]{1,5}$/.test(b.alias) ||
           !(await activeCity(b.city))
         )
@@ -333,12 +335,13 @@ export default {
           return json({}, 400);
         }
         await sql(
-          "UPDATE profiles SET alias=?,city=?,category=?,schedule=?,available=? WHERE user=?",
+          "UPDATE profiles SET alias=?,city=?,category=?,schedule=?,available=?,languages=COALESCE(?,languages) WHERE user=?",
           b.alias,
           b.city,
           b.category,
           JSON.stringify(b.schedule),
           Number(b.available === true),
+          b.languages === undefined ? null : JSON.stringify(b.languages),
           user.id,
         ).run();
         return json({ ok: true });
