@@ -256,7 +256,7 @@ function render() {
       }
     };
     for (const c of cats.filter((c) => !c.restricted))
-      el("category").add(new Option(c[locale], c.id));
+      el("category").add(new Option(c.icon + " " + c[locale], c.id));
     el("category").value = me.category || 3;
     el("city").value = me.city;
     el("available").checked = !!me.available;

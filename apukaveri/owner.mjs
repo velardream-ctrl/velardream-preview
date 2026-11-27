@@ -276,7 +276,7 @@ async function render() {
   el("rate").value = r.policy.rate;
   el("cash").checked = !!r.policy.allow_cash;
   el("split").checked = !!r.policy.allow_split;
-  for (const c of cats) el("cat").add(new Option(c[lang], c.id));
+  for (const c of cats) el("cat").add(new Option(c.icon + " " + c[lang], c.id));
   el("cat").onchange = () => {
     const c = cats.find((x) => x.id === Number(el("cat").value));
     langs.forEach((l) => (el("name-" + l).value = c[l]));
