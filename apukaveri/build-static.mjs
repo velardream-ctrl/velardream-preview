@@ -9,7 +9,7 @@ const files = [
 ];
 if (server) files.push(
   "dispatch.html",
-  "sandbox.html", "sandbox.mjs", "admin.html", "owner.mjs",
+  "registration-terms.mjs", "sandbox.html", "sandbox.mjs", "admin.html", "owner.mjs",
   "helsinki.mjs", "manifest.webmanifest", "sw.js"
 );
 await Promise.all(files.map(file => copyFile(new URL(file, root), new URL(file, output))));

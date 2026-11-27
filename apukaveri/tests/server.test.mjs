@@ -1,3 +1,4 @@
+import { termsVersion, privacyVersion } from "../registration-terms.mjs";
 import { resolveHelsinki } from "../helsinki.mjs";
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -40,7 +41,16 @@ test("synthetic account, permissions, persistence, concurrent claims and reset",
   const password = "synthetic password only";
   async function signup(n) {
     const body = { email: "demo-" + n + "@example.invalid", password };
-    assert.equal((await api("register", body)).status, 201);
+    assert.equal((await api("register", body)).status, 400);
+    assert.equal((await api("register", { ...body, termsVersion, privacyVersion: "old", locale: "fi" })).status, 400);
+    assert.equal((await api("register", { ...body, termsVersion, privacyVersion, locale: "fi" })).status, 201);
+    const acceptance = await env.DB.prepare(
+      "SELECT terms_version,privacy_version,language,accepted_at FROM registration_terms JOIN accounts ON account_id=id WHERE email=?",
+    ).bind(body.email).first();
+    assert.equal(acceptance.terms_version, termsVersion);
+    assert.equal(acceptance.privacy_version, privacyVersion);
+    assert.equal(acceptance.language, "fi");
+    assert.ok(acceptance.accepted_at > 0);
     assert.equal((await api("login", body)).status, 401);
     assert.equal((await api("verify", { code: mail })).status, 200);
     assert.equal((await api("verify", { code: mail })).status, 400);

@@ -1,3 +1,4 @@
+import { termsVersion, privacyVersion, registrationCopy } from "../registration-terms.mjs";
 import { validLanguages } from "../profile-languages.mjs";
 import { finance } from "./finance.mjs";
 import {
@@ -159,6 +160,10 @@ export default {
         )
           return json({}, 400);
         if (path.endsWith("/register")) {
+          if (b.termsVersion !== termsVersion || b.privacyVersion !== privacyVersion ||
+              typeof b.locale !== "string" || !Object.hasOwn(registrationCopy, b.locale)) {
+            return json({ error: "Current terms and privacy acknowledgement required" }, 400);
+          }
           if (!env.deliver)
             return json({ error: "test mailbox unavailable" }, 503);
           if (a) return json({}, 409);
@@ -171,6 +176,10 @@ export default {
             sql(
               "INSERT INTO profiles(user) SELECT id FROM accounts WHERE email=?",
               b.email,
+            ),
+            sql(
+              "INSERT INTO registration_terms(account_id,terms_version,privacy_version,language) SELECT id,?,?,? FROM accounts WHERE email=?",
+              termsVersion, privacyVersion, b.locale, b.email,
             ),
           ]);
           const row = await sql(

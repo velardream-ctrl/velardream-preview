@@ -21,6 +21,8 @@ with subprocess.Popen(['node', 'server/local.mjs'], cwd=root, env={**os.environ,
                 assert heading in page.locator('h1').inner_text()
                 assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
             page.fill('#pwd','synthetic test password')
+            page.check("#acceptTerms")
+            page.check("#ackPrivacy")
             page.click('[data-action="6"]')
             page.fill('#code',server.stdout.readline().split()[-1])
             page.click('[data-action="9"]')

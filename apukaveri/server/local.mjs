@@ -82,6 +82,7 @@ if (import.meta.main) {
     "/finnish-cities.mjs": "finnish-cities.mjs",
     "/availability.mjs": "availability.mjs",
     "/sandbox.html": "sandbox.html",
+    "/registration-terms.mjs": "registration-terms.mjs",
     "/sandbox.mjs": "sandbox.mjs",
     "/admin": "admin.html",
     "/owner.mjs": "owner.mjs",

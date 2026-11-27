@@ -1,3 +1,4 @@
+import { termsVersion, privacyVersion, registrationCopy } from "./registration-terms.mjs";
 import { showLanguageChoices, readLanguageChoices } from "./profile-languages.mjs";
 import { setLocationSelects } from "./location-select.mjs";
 import { resolveHelsinki, helsinkiDate } from "./helsinki.mjs";
@@ -150,6 +151,16 @@ const roleCopy = {
   ru: ["Ищу помощь", "Предлагаю помощь", "Муниципалитет заявки"],
   en: ["Find help", "Offer help", "Request municipality"],
 };
+function registrationTerms() {
+  const copy = registrationCopy[locale];
+  return '<fieldset><legend>' + copy.termsTitle + '</legend>' +
+    '<details><summary>' + copy.termsTitle + ' · ' + termsVersion + '</summary><ul>' +
+    copy.terms.map(text => '<li>' + text + '</li>').join("") + '</ul></details>' +
+    '<details><summary>' + copy.privacyTitle + ' · ' + privacyVersion + '</summary><p>' +
+    copy.privacy + '</p></details>' +
+    '<label><span>' + copy.accept + '</span><input type="checkbox" id="acceptTerms"></label>' +
+    '<label><span>' + copy.acknowledge + '</span><input type="checkbox" id="ackPrivacy"></label></fieldset>';
+}
 function render() {
   document.documentElement.lang = locale;
   el("lang").value = locale;
@@ -171,6 +182,7 @@ function render() {
       field(3, '<input id="email" value="demo-1@example.invalid">') +
       field(4, '<input id="pwd" type="password" autocomplete="off">') +
       field(5, '<input id="remember" type="checkbox">') +
+      (pilot ? "" : registrationTerms()) +
       '<div class="actions">' +
       (pilot
         ? button(7)
@@ -517,11 +529,16 @@ el("app").onclick = async (e) => {
     }
     if (e.target.dataset.claim)
       await api("claim", { id: Number(e.target.dataset.claim) });
+    if (i === 6 && (!el("acceptTerms")?.checked || !el("ackPrivacy")?.checked)) {
+      el("status").textContent = registrationCopy[locale].missing;
+      return;
+    }
     if ([6, 7, 10].includes(i))
       await api({ 6: "register", 7: "login", 10: "recover" }[i], {
         email: val("email"),
         password: val("pwd"),
         remember: el("remember").checked,
+        ...(i === 6 ? { termsVersion, privacyVersion, locale } : {}),
       });
     if ([9, 11].includes(i))
       await api(i === 9 ? "verify" : "reset", {

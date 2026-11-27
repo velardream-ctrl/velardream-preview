@@ -3,6 +3,7 @@ const cacheName = "apukaveri-shell-006-" + self.registration.scope;
 const shell = [
   "sandbox.html",
   "sandbox.mjs",
+  "registration-terms.mjs",
   "location-select.mjs",
   "profile-tools.mjs",
   "profile-languages.mjs",

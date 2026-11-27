@@ -57,13 +57,13 @@ export default {
 
 const publicPaths = new Set([
   "/", "/index.html", "/account.html", "/account.webmanifest", "/account-worker.js", "/dispatch.html", "/sandbox.html",
-  "/location-select.mjs", "/finnish-cities.mjs", "/availability.mjs", "/helper-profile.js", "/sandbox.mjs", "/owner.mjs",
+  "/location-select.mjs", "/finnish-cities.mjs", "/availability.mjs", "/helper-profile.js", "/sandbox.mjs", "/registration-terms.mjs", "/owner.mjs",
   "/service-categories.mjs", "/profile-languages.mjs", "/profile-tools.mjs", "/helsinki.mjs", "/manifest.webmanifest", "/sw.js",
   "/logo.svg", "/icon192.png", "/icon512.png",
 ]);
 
 const pilotPaths = new Set([
-  "/", "/sandbox.html", "/sandbox.mjs", "/owner.mjs",
+  "/", "/sandbox.html", "/sandbox.mjs", "/registration-terms.mjs", "/owner.mjs",
   "/availability.mjs", "/location-select.mjs", "/profile-languages.mjs", "/profile-tools.mjs",
   "/helsinki.mjs", "/logo.svg", "/icon192.png", "/icon512.png",
 ]);
