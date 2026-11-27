@@ -382,7 +382,7 @@ export default {
       if (path === "/api/orders" && !post) {
         const rows = (
           await sql(
-            "SELECT * FROM orders WHERE customer=? OR provider=? OR (cancelled=0 AND customer<>? AND provider IS NULL AND (target IS NULL OR target=?) AND " +
+            "SELECT orders.*,(SELECT stars FROM ratings WHERE order_id=orders.id) AS stars FROM orders WHERE customer=? OR provider=? OR (cancelled=0 AND customer<>? AND provider IS NULL AND (target IS NULL OR target=?) AND " +
               audience +
               " AND EXISTS(SELECT 1 FROM profiles p WHERE p.user=? AND p.available=1 AND p.city=orders.city AND p.category=orders.category))",
             user.id,
@@ -658,6 +658,20 @@ export default {
         ]);
         return json({}, r.meta.changes ? 200 : 404);
       }
+      if (path === "/api/rating" && post) {
+        if (!Number.isSafeInteger(b.id) || !Number.isInteger(b.stars) ||
+            b.stars < 1 || b.stars > 5) return json({}, 400);
+        const result = await sql(
+          "INSERT INTO ratings(order_id,stars) SELECT o.id,? FROM orders o WHERE o.id=? AND o.customer=? AND o.provider IS NOT NULL AND o.cancelled=0 AND EXISTS(SELECT 1 FROM events WHERE order_id=o.id AND kind='completion_confirmed') AND NOT EXISTS(SELECT 1 FROM events WHERE order_id=o.id AND kind='disputed') ON CONFLICT(order_id) DO NOTHING",
+          b.stars, b.id, user.id,
+        ).run();
+        if (result.meta.changes) return json({}, 201);
+        const rated = await sql(
+          "SELECT r.stars FROM ratings r JOIN orders o ON o.id=r.order_id WHERE o.id=? AND o.customer=?",
+          b.id, user.id,
+        ).first();
+        return json({}, rated ? (rated.stars === b.stars ? 200 : 409) : 403);
+      }
       if (path === "/api/search" && post) {
         if (
           !(await activeCity(b.city)) ||
@@ -671,7 +685,7 @@ export default {
           return json({}, 400);
         const rows = (
           await sql(
-            "SELECT user,alias,city,category,schedule FROM profiles p WHERE user<>? AND available=1 AND city=? AND category=? AND NOT EXISTS(SELECT 1 FROM orders o WHERE o.cancelled=0 AND o.provider=p.user AND o.start<? AND o.end>?)",
+            "WITH scores AS (SELECT o.provider,AVG(r.stars) rating,COUNT(*) rating_count FROM ratings r JOIN orders o ON o.id=r.order_id GROUP BY o.provider) SELECT p.user,p.alias,p.city,p.category,p.schedule,s.rating,COALESCE(s.rating_count,0) rating_count FROM profiles p LEFT JOIN scores s ON s.provider=p.user WHERE user<>? AND available=1 AND city=? AND category=? AND NOT EXISTS(SELECT 1 FROM orders o WHERE o.cancelled=0 AND o.provider=p.user AND o.start<? AND o.end>?) ORDER BY s.rating DESC,s.rating_count DESC,p.user",
             user.id,
             b.city,
             b.category,

@@ -288,6 +288,11 @@ function showIntervals() {
   el("intervals").textContent =
     (rows || []).map((r) => r.start + "–" + r.end).join(", ") || "—";
 }
+const ratingCopy = {
+  fi: ["Arvioi tekijä", "Lähetä arvio", "Arvio", "Ei arvioita vielä"],
+  ru: ["Оцените помощника", "Отправить оценку", "Оценка", "Пока без оценок"],
+  en: ["Rate helper", "Submit rating", "Rating", "No ratings yet"],
+};
 async function orders() {
   const rows = await api("orders"),
     inbox = await api("inbox");
@@ -325,6 +330,26 @@ async function orders() {
       t(65) + " · " + amount(row.labour + row.reimbursement - row.fee),
     ].join(" / ");
     li.append(amounts);
+    if (row.customer === me.id && !row.cancelled &&
+        row.confirmations.filter(c => c.topic === "completion" && c.answer === "yes").length === 2 &&
+        !row.confirmations.some(c => c.answer === "dispute")) {
+      const label = document.createElement("label");
+      const copy = ratingCopy[locale];
+      if (row.stars) label.textContent = copy[2] + " " + row.stars + "/5";
+      else {
+        label.textContent = copy[0];
+        const select = document.createElement("select");
+        select.id = "stars-" + row.id;
+        select.add(new Option("—", ""));
+        for (let stars = 1; stars <= 5; stars++) select.add(new Option(stars + "/5", stars));
+        const submit = document.createElement("button");
+        submit.dataset.rateOrder = row.id;
+        submit.textContent = copy[1];
+        label.append(select);
+        li.append(label, submit);
+      }
+      if (row.stars) li.append(label);
+    }
     if (row.confirmations.length) {
       const summary = document.createElement("p");
       summary.textContent = [
@@ -417,6 +442,10 @@ el("app").onclick = async (e) => {
   const i = Number(e.target.dataset.action),
     val = (id) => el(id).value;
   try {
+    if (e.target.dataset.rateOrder) {
+      const id = Number(e.target.dataset.rateOrder);
+      await api("rating", { id, stars: Number(val("stars-" + id)) });
+    }
     if (e.target.dataset.cancel)
       await api("cancel", { id: Number(e.target.dataset.cancel) });
     if (e.target.dataset.view)
@@ -487,7 +516,10 @@ el("app").onclick = async (e) => {
         if (!matches.length) holder.textContent = t(41);
         for (const m of matches) {
           const div = document.createElement("p");
-          div.textContent = m.alias + " · " + m.city + " ";
+          const score = m.rating_count
+            ? "★ " + new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(m.rating) + "/5 (" + m.rating_count + ")"
+            : ratingCopy[locale][3];
+          div.textContent = m.alias + " · " + m.city + " · " + score + " ";
           const fav = document.createElement("button"),
             on = favs.some((f) => f.helper === m.user);
           fav.dataset.fav = m.user;

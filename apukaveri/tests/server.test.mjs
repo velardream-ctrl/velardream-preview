@@ -168,16 +168,32 @@ test("synthetic account, permissions, persistence, concurrent claims and reset",
     "alias",
     "category",
     "city",
+    "rating",
+    "rating_count",
     "user",
   ]);
   const confirm = (topic, actor, id = invoice.id, answer = "yes") =>
     api("confirm", { id, topic, answer }, actor);
+  const rate = (stars, actor = customer) => api("rating", { id: invoice.id, stars }, actor);
+  assert.equal((await rate(5)).status, 403);
   assert.equal((await confirm("completion", q)).status, 403);
   assert.equal((await confirm("completion", p)).status, 200);
   let report = async () => (await api("admin/report", null, customer)).json();
   assert.equal((await report()).entries.length, 0);
   assert.equal((await confirm("completion", customer)).status, 200);
   assert.equal((await confirm("completion", customer)).status, 200);
+  assert.equal((await rate(5, p)).status, 403);
+  assert.equal((await rate(6)).status, 400);
+  assert.equal((await rate(5)).status, 201);
+  assert.equal((await rate(5)).status, 200);
+  assert.equal((await rate(4)).status, 409);
+  const ranked = await (await api("search", {
+    ...order, start: order.start + 86400000, end: order.end + 86400000,
+  }, customer)).json();
+  assert.equal(ranked[0].user, 2);
+  assert.equal(ranked[0].rating, 5);
+  assert.equal(ranked[0].rating_count, 1);
+  assert.equal(ranked[1].rating_count, 0);
   assert.equal((await report()).totals.accrual, 600);
   const entry = {
     id: invoice.id,

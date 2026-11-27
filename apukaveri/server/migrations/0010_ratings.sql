@@ -1,0 +1,5 @@
+CREATE TABLE ratings (
+  order_id INTEGER PRIMARY KEY REFERENCES orders(id) ON DELETE CASCADE,
+  stars INTEGER NOT NULL CHECK (stars BETWEEN 1 AND 5),
+  created_at INTEGER NOT NULL DEFAULT (unixepoch())
+);
