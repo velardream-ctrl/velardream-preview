@@ -94,6 +94,11 @@ const customerFeeText = {
   ru: ["Расчёт сервисного сбора", "Работа (€)", "Возмещение расходов (€)", "Оценка расходов на обработку платежа (€)", "Рассчитать", "Сервисный сбор", "Заказчик платит", "Исполнителю", "Платформе после обработки платежа, до прочих расходов и налогов"],
   en: ["Service fee estimate", "Labour (€)", "Reimbursement (€)", "Estimated processing cost (€)", "Calculate", "Service fee", "Customer pays", "Helper receives", "Platform after processing, before other costs and taxes"],
 };
+const paymentStatus = {
+  fi: "Verkkomaksu, jaettu maksu ja käteislasku ovat testitiloja. Maksupalvelua ei ole yhdistetty.",
+  ru: "Онлайн, раздельная оплата и наличные со счётом доступны для тестовых расчётов. Провайдер ещё не подключён.",
+  en: "Online, split and cash with invoice are test modes. The payment provider is pending.",
+};
 const customerFeeFields = ["labour", "reimbursement", "processing"];
 function customerFeePanel() {
   const copy = customerFeeText[lang];
@@ -239,7 +244,7 @@ async function render() {
       .join("") +
     "</div><section><h2>" +
     t(11) +
-    '</h2><div class="row">' +
+    "</h2><p>" + paymentStatus[lang] + '</p><div class="row">' +
     field(12, "rate", "number") +
     field(13, "split", "checkbox") +
     field(14, "cash", "checkbox") +
