@@ -22,7 +22,8 @@ h1{font-size:clamp(1.9rem,6vw,3.1rem);font-family:Georgia,serif;font-weight:400;
 .drop.drag{background:#203d67;border-color:#f4d795}
 .drop strong{display:block;font-size:1.13rem;color:#f4d795;margin-bottom:9px}
 .drop small{display:block;color:#b7c8e0;line-height:1.6}
-.drop input{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden}
+.drop input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;z-index:1}
+.file-fallback{margin-top:12px}.file-fallback input{display:block;width:100%;min-height:44px;color:#f5f2ec;font:inherit}.file-fallback input::file-selector-button{background:#263d60;color:#f5f2ec;border:1px solid #546e96;border-radius:9px;padding:10px;font:inherit;margin-right:8px}
 .drop:focus-within{outline:3px solid #ffe0a2;outline-offset:3px}
 .fileinfo{overflow-wrap:anywhere;color:#e8e6dc;margin-top:15px;min-height:24px}
 fieldset{border:0;padding:0;margin:22px 0}
@@ -55,15 +56,16 @@ footer{margin-top:30px;color:#a2b3d0;font-size:.88rem;line-height:1.6}
 </head>
 <body>
 <main>
-<div class="top"><a class="brand" href="../">VELAR DREAM RECORDS</a><span class="stage">AUDIO STUDIO · 27.11.2026</span></div>
+<div class="top"><a class="brand" href="../">VELAR DREAM RECORDS</a><span class="stage">AUDIO STUDIO · 27.11.2026 · V217</span></div>
 <h1>Аудиоконвертер</h1>
 <p class="intro">Конвертируйте MP3, WAV и FLAC, независимо изменяйте тональность и темп или сохраняйте оригинал без изменений. Бесплатно, без регистрации и без загрузки аудио на сервер.</p>
 <section class="panel" aria-label="Конвертация файла">
 <label class="drop" id="drop">
 <strong>♫ Выбрать аудиофайл</strong>
 <small>Нажмите или перетащите файл: WAV, FLAC (в том числе Hi-Res), MP3, M4A, AAC или другой аудиоформат, который читает браузер.</small>
-<input id="file" type="file" accept="audio/*,.wav,.m4a,.aac,.aif,.aiff,.ogg,.flac,.mp4" aria-label="Выбрать аудиофайл">
+<input id="file" type="file" accept=".mp3,audio/mpeg,audio/mp3,.wav,.flac,.m4a,.aac,.aif,.aiff,.ogg,.opus,.mp4,audio/*" aria-label="Выбрать аудиофайл">
 </label>
+<details class="file-fallback"><summary>MP3 не выбирается? Открыть все файлы</summary><p class="option-help">Выберите аудиозапись из приложения «Файлы» без фильтра расширений. Если файл в iCloud, сначала дождитесь его загрузки на устройство.</p><input id="file-any" type="file" aria-label="Выбрать файл без фильтра форматов"></details>
 <div id="fileinfo" class="fileinfo" aria-live="polite">Файл пока не выбран.</div>
 <fieldset>
 <legend><label for="target-format">В какой формат конвертировать?</label></legend>
@@ -139,6 +141,6 @@ footer{margin-top:30px;color:#a2b3d0;font-size:.88rem;line-height:1.6}
 <footer>Конвертируйте только файлы, на которые у вас есть права. Аудио обрабатывается на устройстве; библиотеки загружаются отдельно, исходные файлы не отправляются в Firebase, на сервер или в сторонние сервисы. MP3 — <a href="https://github.com/zhuker/lamejs">lamejs (LGPL-3.0)</a>, FLAC — <a href="https://github.com/mmig/libflac.js">libflac.js (MIT)</a> и <a href="https://github.com/eshaz/wasm-audio-decoders">FLAC-декодер (MIT)</a>. Преобразование MP3 → FLAC/WAV не восстанавливает потерянное качество. Для изменения высоты и темпа используется SoundTouchJS из студии вокалиста (LGPL-2.1); максимальное качество зависит от записи и настроек. Максимальный исходный файл — 120 МБ, продолжительность — 45 минут.</footer>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js"></script>
-<script src="audio-converter.js?v=216"></script>
+<script src="audio-converter.js?v=217"></script>
 </body>
 </html>

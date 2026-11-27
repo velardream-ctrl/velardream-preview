@@ -6,7 +6,7 @@
 (function(root){
 'use strict';
 function $(id){return document.getElementById(id);}
-var input=$('file'),drop=$('drop'),info=$('fileinfo'),status=$('status'),
+var input=$('file'),anyInput=$('file-any'),drop=$('drop'),info=$('fileinfo'),status=$('status'),
  convert=$('convert'),cancel=$('cancel'),progress=$('progress'),download=$('download'),
  format=$('target-format'),quality=$('quality-hint'),rateSelect=$('target-rate');
 var pitch=$('pitch'),tempo=$('tempo'),originalPlayer=$('original-player'),resultPlayer=$('result-player'),originalUrl=null;
@@ -15,7 +15,7 @@ function say(s){status.textContent=s;}
 function tick(){return new Promise(function(ok){setTimeout(ok,0);});}
 function mb(n){return (n/1048576).toFixed(1)+' МБ';}
 function clearResult(){resultPlayer.pause();resultPlayer.removeAttribute('src');resultPlayer.load();$('result-wrap').hidden=true;if(objectUrl){URL.revokeObjectURL(objectUrl);objectUrl=null;}download.hidden=true;download.removeAttribute('href');}
-function setBusy(v){busy=v;input.disabled=v;format.disabled=v;pitch.disabled=v;tempo.disabled=v;$('reset-transform').disabled=v;convert.disabled=v||!selected;cancel.disabled=!v;Array.from(document.querySelectorAll('#mp3-options input,#wav-options input,#flac-options input,#flac-options select,#rate-options select')).forEach(function(el){el.disabled=v;});}
+function setBusy(v){busy=v;input.disabled=v;anyInput.disabled=v;format.disabled=v;pitch.disabled=v;tempo.disabled=v;$('reset-transform').disabled=v;convert.disabled=v||!selected;cancel.disabled=!v;Array.from(document.querySelectorAll('#mp3-options input,#wav-options input,#flac-options input,#flac-options select,#rate-options select')).forEach(function(el){el.disabled=v;});}
 function fmtName(x){return {mp3:'MP3',wav:'WAV',flac:'FLAC'}[x]||'аудио';}
 function extName(name,ext){return (String(name||'').replace(/\.[^.]+$/,'').replace(/[\\/:*?"<>|]+/g,'_').trim()||'audio')+'.'+ext;}
 function radioValue(name){var el=document.querySelector('input[name="'+name+'"]:checked');return el?Number(el.value):0;}
@@ -46,9 +46,11 @@ function choose(file){
  if(!selected.size){selected=null;say('Пустой файл. Выберите другой.');}
  else if(selected.size>120*1048576){selected=null;say('Файл превышает предел 120 МБ для браузерной обработки.');}
  else say(selected.size>30*1048576?'Крупный файл: на старом телефоне или планшете может не хватить памяти.':'Файл выбран. Настройте выходной формат и нажмите «Конвертировать».');
- if(selected){originalUrl=URL.createObjectURL(selected);originalPlayer.src=originalUrl;$('original-wrap').hidden=false;}convert.disabled=!selected;updateChoices();
+ if(selected){try{originalUrl=URL.createObjectURL(selected);originalPlayer.src=originalUrl;$('original-wrap').hidden=false;}catch(e){say('Файл выбран. Предпросмотр недоступен, можно попробовать конвертацию.');}}convert.disabled=!selected;updateChoices();
 }
-input.addEventListener('change',function(){choose(input.files&&input.files[0]);});
+function pickFrom(control){var picked=control.files&&control.files[0];if(picked){choose(picked);control.value='';}}
+input.addEventListener('change',function(){pickFrom(input);});
+anyInput.addEventListener('change',function(){pickFrom(anyInput);});
 format.addEventListener('change',function(){clearResult();updateChoices();});
 function changeTransform(){var p=Number(pitch.value);$('pitch-label').textContent=(p>0?'+':'')+p+' полутонов';$('tempo-label').textContent=tempo.value+'%';clearResult();updateChoices();}
 pitch.addEventListener('input',changeTransform);tempo.addEventListener('input',changeTransform);$('reset-transform').addEventListener('click',function(){pitch.value=0;tempo.value=100;changeTransform();});
