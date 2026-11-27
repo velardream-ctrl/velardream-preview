@@ -75,6 +75,8 @@ if (import.meta.main) {
     "/index.html": "index.html",
     "/helper-profile.js": "helper-profile.js",
     "/account.html": "account.html",
+    "/account.webmanifest": "account.webmanifest",
+    "/account-worker.js": "account-worker.js",
     "/dispatch.html": "dispatch.html",
     "/location-select.mjs": "location-select.mjs",
     "/finnish-cities.mjs": "finnish-cities.mjs",
