@@ -62,7 +62,6 @@ footer{margin-top:30px;color:#a2b3d0;font-size:.88rem;line-height:1.6}
 <div class="facts"><p><strong>Приватность.</strong> Файлы не отправляются на сервер. При первом запуске загружается аудиодвижок FFmpeg.wasm.</p><p><strong>Качество.</strong> При изменении темпа или высоты сигнал неизбежно изменяется. WAV и FLAC исключают дополнительные потери от сжатия.</p><p><strong>Совместимость.</strong> На старых телефонах и планшетах может не хватить памяти. Сохранение исходного формата с обработкой доступно для форматов в списке.</p></div>
 <footer>Используйте аудио, на которое у вас есть права. Движок: <a href="https://github.com/ffmpegwasm/ffmpeg.wasm">FFmpeg.wasm (исходный код и лицензии)</a>. <a href="https://github.com/FFmpeg/FFmpeg">FFmpeg</a>. Результат хранится локально до закрытия вкладки или выбора нового файла.</footer></main>
 <script type="module">
-import {FFmpeg} from 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/esm/index.js';
 const $=id=>document.getElementById(id);
 const fileInput=$('file'),format=$('format'),quality=$('quality'),pitch=$('pitch'),tempo=$('tempo'),progress=$('progress'),convert=$('convert'),cancel=$('cancel');
 const codecs={WAV:['wav','audio/wav'],FLAC:['flac','audio/flac'],MP3:['mp3','audio/mpeg'],M4A:['m4a','audio/mp4'],AAC:['aac','audio/aac'],OGG:['ogg','audio/ogg'],OPUS:['opus','audio/ogg'],AIFF:['aiff','audio/aiff']};
@@ -81,7 +80,7 @@ function update(){const p=Number(pitch.value);$('pitchOut').textContent=(p>0?'+'
  Array.from(quality.options).forEach(o=>{o.disabled=o.value!=='auto'&&(lossless?(!['16','24','32'].includes(o.value)||(o.value==='32'&&t!=='WAV')):!['128','192','320'].includes(o.value));});
  if(quality.selectedOptions[0]?.disabled)quality.value='auto';
  $('modeHint').textContent=original()?'Без изменений: оригинал будет скачан без повторного кодирования.':(!codecs[t]?'Для обработки выберите один из поддерживаемых форматов результата.':lossless?'Сохранение без дополнительных потерь от сжатия.':'Сжатие с потерями: при повторном кодировании возможна потеря качества.');
- $('qualityHint').textContent=lossless?'Авто: сохраняем разрядность по данным исходника, насколько позволяет формат.':'Авто: высокий битрейт; не восстанавливает уже утраченное качество.';
+ $('qualityHint').textContent=lossless?'Авто: сохраняем разрядность по данным исходника, насколько позволяет формат (FLAC — до 24 бит в этой сборке).':'Авто: высокий битрейт в пределах кодека; не восстанавливает утраченное качество.';
 }
 function select(f){if(busy)return;clearResult();clearBefore();file=f||null;progress.hidden=true;if(!file||!file.size){file=null;$('fileinfo').textContent='Файл пока не выбран.';say('Выберите непустой файл.');}else if(file.size>120*1048576){file=null;$('fileinfo').textContent='Файл превышает 120 МБ.';say('Выберите меньший файл.');}else{ $('fileinfo').textContent=file.name+' · '+readable(file.size);beforeUrl=URL.createObjectURL(file);$('before').src=beforeUrl;$('beforeWrap').hidden=false;say('Файл готов.');}setBusy(false);update();}
 fileInput.addEventListener('change',()=>select(fileInput.files[0]));
@@ -89,7 +88,7 @@ for(const ev of ['dragover','dragenter','dragleave','drop'])$('drop').addEventLi
 for(const el of [format,quality,pitch,tempo])el.addEventListener('input',()=>{clearResult();update();});
 $('reset').onclick=()=>{format.value='same';quality.value='auto';pitch.value=0;tempo.value=100;clearResult();update();};
 cancel.onclick=()=>{token++;if(engine){engine.terminate();engine=null;}setBusy(false);progress.hidden=true;say('Обработка отменена.');};
-async function load(myToken){if(engine)return engine;const ff=new FFmpeg();engine=ff;logs=[];ff.on('log',({message})=>{logs.push(message);if(logs.length>600)logs.shift();});ff.on('progress',({progress:p})=>{if(token===myToken&&busy&&Number.isFinite(p)){progress.value=Math.max(10,Math.min(95,10+p*85));}});
+async function load(myToken){if(engine)return engine;const {FFmpeg}=await import('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/esm/index.js');if(myToken!==token)throw Error('Отменено.');const ff=new FFmpeg();engine=ff;logs=[];ff.on('log',({message})=>{logs.push(message);if(logs.length>600)logs.shift();});ff.on('progress',({progress:p})=>{if(token===myToken&&busy&&Number.isFinite(p)){progress.value=Math.max(10,Math.min(95,10+p*85));}});
  const base='https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm';
  await ff.load({classWorkerURL:new URL('./audio-converter-worker.js',location.href).href,coreURL:base+'/ffmpeg-core.js',wasmURL:base+'/ffmpeg-core.wasm'});
  logs=[];await ff.exec(['-hide_banner','-filters']);supportsRubberband=logs.some(s=>/\brubberband\b/.test(s));return ff;}
@@ -98,8 +97,8 @@ function filters(p,t,rate,rubber){if(!p&&t===1)return [];const r=2**(p/12);if(ru
 function options(t,s){const q=quality.value;const bits=Number(s.bits_per_raw_sample)||Number(s.bits_per_sample)||(/s32/.test(s.sample_fmt||'')?24:/flt|dbl/.test(s.sample_fmt||'')?32:16);
  if(t==='WAV'||t==='AIFF'){let depth=['16','24','32'].includes(q)?Number(q):bits>24?(t==='WAV'?32:24):bits>16?24:16;return ['-c:a',t==='WAV'?(depth===32?'pcm_f32le':'pcm_s'+depth+'le'):'pcm_s'+depth+'be'];}
  if(t==='FLAC'){const depth=q==='16'?16:q==='24'?24:bits>16?24:16;return ['-c:a','flac','-sample_fmt',depth===16?'s16':'s32','-compression_level','5'];}
- const br=['128','192','320'].includes(q)?q:'320';const map={MP3:'libmp3lame',M4A:'aac',AAC:'aac',OGG:'libvorbis',OPUS:'libopus'};
- return ['-c:a',map[t],'-b:a',br+'k'];}
+ if(t==='OGG'&&q==='auto')return ['-c:a','libvorbis','-q:a','7'];const br=['128','192','320'].includes(q)?q:'320';const map={MP3:'libmp3lame',M4A:'aac',AAC:'aac',OGG:'libvorbis',OPUS:'libopus'};
+ return ['-c:a',map[t],'-b:a',(t==='OGG'&&Number(s.channels)===1?Math.min(Number(br),160):Number(br))+'k'];}
 function result(blob,name,notice){afterUrl=URL.createObjectURL(blob);$('after').src=afterUrl;$('afterWrap').hidden=false;$('download').href=afterUrl;$('download').download=name;$('download').textContent='Скачать '+name+' · '+readable(blob.size);$('download').hidden=false;progress.hidden=false;progress.value=100;say(notice);}
 async function read(f){if(f.arrayBuffer)return new Uint8Array(await f.arrayBuffer());return new Uint8Array(await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsArrayBuffer(f);}));}
 convert.onclick=async()=>{if(!file||busy)return;clearResult();const chosen=file,t=target(),my=++token;
