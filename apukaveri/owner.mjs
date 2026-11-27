@@ -89,6 +89,23 @@ async function api(path, body) {
   if (!r.ok) throw Error(String(r.status));
   return r.json();
 }
+const customerFeeText = {
+  fi: ["Palvelumaksun laskelma", "Työ (€)", "Kulujen korvaus (€)", "Arvio maksunkäsittelyn kuluista (€)", "Laske", "Palvelumaksu", "Asiakas maksaa", "Tekijälle", "Alustalle maksunkäsittelyn jälkeen, ennen muita kuluja ja veroja"],
+  ru: ["Расчёт сервисного сбора", "Работа (€)", "Возмещение расходов (€)", "Оценка расходов на обработку платежа (€)", "Рассчитать", "Сервисный сбор", "Заказчик платит", "Исполнителю", "Платформе после обработки платежа, до прочих расходов и налогов"],
+  en: ["Service fee estimate", "Labour (€)", "Reimbursement (€)", "Estimated processing cost (€)", "Calculate", "Service fee", "Customer pays", "Helper receives", "Platform after processing, before other costs and taxes"],
+};
+const customerFeeFields = ["labour", "reimbursement", "processing"];
+function customerFeePanel() {
+  const copy = customerFeeText[lang];
+  return '<section><h2>' + copy[0] + '</h2><div class="row">' +
+    customerFeeFields.map((name, i) =>
+      '<label>' + copy[i + 1] + '<input id="estimate-' + name +
+      '" type="number" min="0" max="100000" step="0.01" value="' +
+      (i === 0 ? "40" : "0") + '"></label>',
+    ).join("") +
+    '<button id="customer-fee-preview">' + copy[4] +
+    '</button></div><output id="customer-fee-result" aria-live="polite"></output></section>';
+}
 const terms = {
   accrual: ["Provisio ansaittu", "Начислена комиссия", "Commission accrued"],
   cash_due: ["Laskutettava provisio", "Долг по комиссии", "Commission due"],
@@ -227,7 +244,7 @@ async function render() {
     field(13, "split", "checkbox") +
     field(14, "cash", "checkbox") +
     btn(15, "policy") +
-    "</div></section><section><h2>" +
+    "</div></section>" + customerFeePanel() + "<section><h2>" +
     t(23) +
     '</h2><select id="cat"></select><div class="row">' +
     langs
@@ -336,6 +353,25 @@ el("panel").onclick = async (e) => {
     n = (id) => Number(el(id).value);
   e.target.disabled = true;
   try {
+    if (id === "customer-fee-preview") {
+      const inputs = customerFeeFields.map((name) => el("estimate-" + name));
+      if (inputs.some((input) => !input.value || !input.checkValidity()))
+        throw Error("EUR");
+      const quote = await api("admin/customer-fee-preview", Object.fromEntries(
+        customerFeeFields.map((name, i) => [name, Math.round(inputs[i].valueAsNumber * 100)]),
+      ));
+      const result = el("customer-fee-result");
+      const copy = customerFeeText[lang];
+      result.replaceChildren(...[
+        "serviceFee", "customerTotal", "helperTotal", "estimatedPlatformMargin",
+      ].map((name, i) => {
+        const line = document.createElement("div");
+        line.textContent = copy[i + 5] + " — " + money(quote[name]);
+        return line;
+      }));
+      e.target.disabled = false;
+      return;
+    }
     if (id === "filter") {
       filters = new URLSearchParams();
       for (const f of ["city", "category", "helper", "from", "to"])

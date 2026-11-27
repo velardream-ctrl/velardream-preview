@@ -39,6 +39,23 @@ export async function finance(path, post, b, user, sql, db, json, url) {
       kind,
       detail,
     );
+  if (path === "/api/admin/customer-fee-preview" && post) {
+    const { labour, reimbursement, processing } = b;
+    if (![labour, reimbursement, processing].every(
+      (value) => Number.isSafeInteger(value) && value >= 0 && value <= 10000000,
+    )) return json({}, 400);
+    const { rate } = await sql("SELECT rate FROM policy WHERE id=1").first();
+    const serviceFee = Math.round(labour * rate / 100);
+    return json({
+      currency: "EUR",
+      labour,
+      reimbursement,
+      serviceFee,
+      customerTotal: labour + reimbursement + serviceFee,
+      helperTotal: labour + reimbursement,
+      estimatedPlatformMargin: serviceFee - processing,
+    });
+  }
   if (path === "/api/admin/policy" && post) {
     if (
       !Number.isInteger(b.rate) ||

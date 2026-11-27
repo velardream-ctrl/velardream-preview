@@ -51,6 +51,18 @@ test("synthetic account, permissions, persistence, concurrent claims and reset",
   assert.equal((await api("me")).status, 401);
   env.DB.prepare("UPDATE accounts SET owner=1 WHERE id=1").bind().run();
   assert.equal((await api("admin", null, customer)).status, 200);
+  const feeInput = { labour: 4000, reimbursement: 500, processing: 200 };
+  assert.equal((await api("admin/customer-fee-preview", feeInput, p)).status, 403);
+  const estimate = await api("admin/customer-fee-preview", feeInput, customer);
+  assert.deepEqual(await estimate.json(), {
+    currency: "EUR", labour: 4000, reimbursement: 500, serviceFee: 600,
+    customerTotal: 5100, helperTotal: 4500, estimatedPlatformMargin: 400,
+  });
+  assert.equal((await api("admin/customer-fee-preview", {
+    ...feeInput, labour: -1,
+  }, customer)).status, 400);
+  const free = await api("admin/customer-fee-preview", { ...feeInput, labour: 0 }, customer);
+  assert.equal((await free.json()).serviceFee, 0);
   const schedule = {
     weekly: Object.fromEntries(
       Array.from({ length: 7 }, (_, i) => [
