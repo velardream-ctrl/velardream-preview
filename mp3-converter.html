@@ -42,8 +42,9 @@ footer{margin-top:30px;color:#a2b3d0;font-size:.88rem;line-height:1.6}
 .settings{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,235px),1fr));gap:14px;margin:20px 0}.control{border:1px solid #405778;border-radius:14px;padding:15px;background:#0a1932}.control label{display:block;font-weight:600;margin-bottom:8px}.control output{color:#f4d48b;float:right}.control input[type=range]{width:100%;accent-color:#f4d48b}.control select{width:100%;min-height:44px;background:#152b49;color:#fff;border:1px solid #627b9f;border-radius:9px;padding:8px;font:inherit}.control small,.hint{color:#b9c8dd;line-height:1.5}.listen{margin:15px 0}audio{width:100%;display:block;margin:8px 0}.choiceRow{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.choiceRow input{accent-color:#f4d48b}.warning{color:#f4d795}.fileinfo{white-space:pre-line}
 </style>
 </head><body><main>
-<div class="top"><a class="brand" href="./">VELAR DREAM RECORDS</a><span class="stage">AUDIO STUDIO · ТЕСТОВАЯ ВЕРСИЯ</span></div>
+<div class="top"><a class="brand" href="./">VELAR DREAM RECORDS</a><span class="stage">AUDIO STUDIO · 27.11.2026</span></div>
 <h1>Универсальный аудиоконвертер</h1><p class="intro">Изменяйте формат, тональность и темп независимо. Оригинал останется неизменным. Обработка происходит на вашем устройстве, без отправки аудио на сервер.</p>
+<p class="hint">Если новое аудиоядро не запускается на вашем устройстве, используйте <a href="./classic-audio-converter.html">классический конвертер</a> без настройки темпа и тональности.</p>
 <section class="panel" aria-label="Настройки аудио">
 <label class="drop" id="drop"><strong>♫ Выбрать аудиофайл</strong><small>MP3, WAV, FLAC, M4A, AAC, OGG, OPUS, AIFF и другие форматы</small><input id="file" type="file" accept="audio/*,.wav,.mp3,.flac,.m4a,.aac,.ogg,.opus,.aiff,.aif,.wma,.alac"></label>
 <div id="fileinfo" class="fileinfo" aria-live="polite">Файл пока не выбран.</div>
@@ -82,7 +83,7 @@ function update(){const p=Number(pitch.value);$('pitchOut').textContent=(p>0?'+'
  $('modeHint').textContent=original()?'Без изменений: оригинал будет скачан без повторного кодирования.':(!codecs[t]?'Для обработки выберите один из поддерживаемых форматов результата.':lossless?'Сохранение без дополнительных потерь от сжатия.':'Сжатие с потерями: при повторном кодировании возможна потеря качества.');
  $('qualityHint').textContent=lossless?'Авто: сохраняем разрядность по данным исходника, насколько позволяет формат (FLAC — до 24 бит в этой сборке).':'Авто: высокий битрейт в пределах кодека; не восстанавливает утраченное качество.';
 }
-function select(f){if(busy)return;clearResult();clearBefore();file=f||null;progress.hidden=true;if(!file||!file.size){file=null;$('fileinfo').textContent='Файл пока не выбран.';say('Выберите непустой файл.');}else if(file.size>120*1048576){file=null;$('fileinfo').textContent='Файл превышает 120 МБ.';say('Выберите меньший файл.');}else{ $('fileinfo').textContent=file.name+' · '+readable(file.size);beforeUrl=URL.createObjectURL(file);$('before').src=beforeUrl;$('beforeWrap').hidden=false;say('Файл готов.');}setBusy(false);update();}
+function select(f){if(busy)return;clearResult();clearBefore();file=f||null;progress.hidden=true;if(!file||!file.size){file=null;$('fileinfo').textContent='Файл пока не выбран.';say('Выберите непустой файл.');}else if(file.size>120*1048576){file=null;$('fileinfo').textContent='Файл превышает 120 МБ.';say('Выберите меньший файл.');}else{ $('fileinfo').textContent=file.name+' · '+readable(file.size);beforeUrl=URL.createObjectURL(file);$('before').src=beforeUrl;$('beforeWrap').hidden=false;say(file.size>30*1048576?'Файл крупный. Для изменения темпа или тональности на телефоне может не хватить памяти.':'Файл готов.');}setBusy(false);update();}
 fileInput.addEventListener('change',()=>select(fileInput.files[0]));
 for(const ev of ['dragover','dragenter','dragleave','drop'])$('drop').addEventListener(ev,e=>{e.preventDefault();$('drop').classList.toggle('drag',!busy&&(ev==='dragover'||ev==='dragenter'));if(ev==='drop'&&!busy&&e.dataTransfer.files[0]){fileInput.value='';select(e.dataTransfer.files[0]);}});
 for(const el of [format,quality,pitch,tempo])el.addEventListener('input',()=>{clearResult();update();});
@@ -120,4 +121,4 @@ convert.onclick=async()=>{if(!file||busy)return;clearResult();const chosen=file,
  }catch(e){if(my===token){progress.hidden=true;say('Ошибка: '+(e?.message||e));if(engine){engine.terminate();engine=null;}}}finally{if(my===token){if(ff&&ff===engine){for(const n of [input,out,meta])try{await ff.deleteFile(n);}catch(e){}ff.terminate();engine=null;}setBusy(false);}}};
 window.addEventListener('pagehide',()=>{token++;if(engine)engine.terminate();clearBefore();clearResult();});update();
 </script>
-<noscript>Для работы конвертера необходимо включить JavaScript.</noscript></body></html>
+<script nomodule>document.getElementById('status').textContent='Этот браузер не поддерживает новый движок. Откройте классический конвертер или обновите браузер.';</script><noscript>Для работы конвертера необходимо включить JavaScript.</noscript></body></html>
