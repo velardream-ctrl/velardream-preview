@@ -55,9 +55,9 @@ footer{margin-top:30px;color:#a2b3d0;font-size:.88rem;line-height:1.6}
 </head>
 <body>
 <main>
-<div class="top"><a class="brand" href="../">VELAR DREAM RECORDS</a><span class="stage">ТЕСТОВАЯ ВЕРСИЯ · УНИВЕРСАЛЬНЫЙ КОНВЕРТЕР</span></div>
+<div class="top"><a class="brand" href="../">VELAR DREAM RECORDS</a><span class="stage">AUDIO STUDIO · 27.11.2026</span></div>
 <h1>Аудиоконвертер</h1>
-<p class="intro">Конвертируйте музыку и записи между MP3, WAV и FLAC прямо на телефоне, планшете или компьютере. Бесплатно, без регистрации и без загрузки аудио на сервер.</p>
+<p class="intro">Конвертируйте MP3, WAV и FLAC, независимо изменяйте тональность и темп или сохраняйте оригинал без изменений. Бесплатно, без регистрации и без загрузки аудио на сервер.</p>
 <section class="panel" aria-label="Конвертация файла">
 <label class="drop" id="drop">
 <strong>♫ Выбрать аудиофайл</strong>
@@ -68,12 +68,24 @@ footer{margin-top:30px;color:#a2b3d0;font-size:.88rem;line-height:1.6}
 <fieldset>
 <legend><label for="target-format">В какой формат конвертировать?</label></legend>
 <select id="target-format" class="option-select">
-<option value="mp3" selected>MP3 — компактный файл</option>
+<option value="same" selected>Как у оригинала</option>
+<option value="mp3">MP3 — компактный файл</option>
 <option value="wav">WAV — без сжатия (PCM)</option>
 <option value="flac">FLAC — сжатие без потерь</option>
 </select>
 <p id="quality-hint" class="option-help" aria-live="polite">Выберите подходящий формат.</p>
 </fieldset>
+<fieldset id="music-controls">
+<legend>Тональность и темп</legend>
+<label for="pitch">Тональность: <output id="pitch-label">0 полутонов</output></label>
+<input id="pitch" type="range" min="-12" max="12" step="1" value="0" style="width:100%;accent-color:#f4d795">
+<p class="option-help">Изменяет высоту звука независимо от темпа.</p>
+<label for="tempo">Скорость: <output id="tempo-label">100%</output></label>
+<input id="tempo" type="range" min="50" max="150" step="1" value="100" style="width:100%;accent-color:#f4d795">
+<p class="option-help">Изменяет скорость без намеренного изменения тональности. Сохранение формант не гарантируется.</p>
+<button id="reset-transform" type="button" class="secondary">Сбросить тональность и темп</button>
+</fieldset>
+<div id="original-wrap" hidden><strong>Оригинал</strong><audio id="original-player" controls preload="metadata" style="width:100%;margin:8px 0"></audio></div>
 <fieldset id="mp3-options">
 <legend>Качество MP3</legend>
 <div class="choices">
@@ -115,6 +127,7 @@ footer{margin-top:30px;color:#a2b3d0;font-size:.88rem;line-height:1.6}
 <div class="actions"><button id="convert" class="primary" type="button" disabled>Конвертировать</button><button id="cancel" class="secondary" type="button" disabled>Отменить</button></div>
 <div class="status" id="status" role="status" aria-live="polite">Ожидание файла.</div>
 <progress id="progress" value="0" max="100" aria-label="Прогресс конвертации" hidden></progress>
+<div id="result-wrap" hidden><strong>Результат</strong><audio id="result-player" controls preload="metadata" style="width:100%;margin:8px 0"></audio></div>
 <a id="download" class="download" href="#" hidden download>Скачать готовый файл</a>
 </section>
 <div class="facts">
@@ -123,9 +136,9 @@ footer{margin-top:30px;color:#a2b3d0;font-size:.88rem;line-height:1.6}
 <p><strong>FLAC</strong> — сжатие без потерь, 16 или 24 бит. Подходит для хранения исходного качества, если не уменьшать разрядность и частоту.</p>
 <p><strong>Локальная обработка</strong> — файл остаётся в браузере. Для M4A/AAC и других форматов входное декодирование зависит от устройства. Старый iPad может не справиться с большими файлами. DRM и ссылки на стриминг не поддерживаются.</p>
 </div>
-<footer>Конвертируйте только файлы, на которые у вас есть права. Аудио обрабатывается на устройстве; библиотеки загружаются отдельно, исходные файлы не отправляются в Firebase, на сервер или в сторонние сервисы. MP3 — <a href="https://github.com/zhuker/lamejs">lamejs (LGPL-3.0)</a>, FLAC — <a href="https://github.com/mmig/libflac.js">libflac.js (MIT)</a> и <a href="https://github.com/eshaz/wasm-audio-decoders">FLAC-декодер (MIT)</a>. Преобразование MP3 → FLAC/WAV не восстанавливает потерянное качество. Максимальный исходный файл — 120 МБ, продолжительность — 45 минут.</footer>
+<footer>Конвертируйте только файлы, на которые у вас есть права. Аудио обрабатывается на устройстве; библиотеки загружаются отдельно, исходные файлы не отправляются в Firebase, на сервер или в сторонние сервисы. MP3 — <a href="https://github.com/zhuker/lamejs">lamejs (LGPL-3.0)</a>, FLAC — <a href="https://github.com/mmig/libflac.js">libflac.js (MIT)</a> и <a href="https://github.com/eshaz/wasm-audio-decoders">FLAC-декодер (MIT)</a>. Преобразование MP3 → FLAC/WAV не восстанавливает потерянное качество. Для изменения высоты и темпа используется SoundTouchJS из студии вокалиста (LGPL-2.1); максимальное качество зависит от записи и настроек. Максимальный исходный файл — 120 МБ, продолжительность — 45 минут.</footer>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js"></script>
-<script src="audio-converter.js?v=215"></script>
+<script src="audio-converter.js?v=216"></script>
 </body>
 </html>

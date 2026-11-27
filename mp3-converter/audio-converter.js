@@ -9,22 +9,27 @@ function $(id){return document.getElementById(id);}
 var input=$('file'),drop=$('drop'),info=$('fileinfo'),status=$('status'),
  convert=$('convert'),cancel=$('cancel'),progress=$('progress'),download=$('download'),
  format=$('target-format'),quality=$('quality-hint'),rateSelect=$('target-rate');
+var pitch=$('pitch'),tempo=$('tempo'),originalPlayer=$('original-player'),resultPlayer=$('result-player'),originalUrl=null;
 var selected=null,busy=false,stopped=false,objectUrl=null,flacDecoderLoader=null,flacEncoderLoader=null;
 function say(s){status.textContent=s;}
 function tick(){return new Promise(function(ok){setTimeout(ok,0);});}
 function mb(n){return (n/1048576).toFixed(1)+' МБ';}
-function clearResult(){if(objectUrl){URL.revokeObjectURL(objectUrl);objectUrl=null;}download.hidden=true;download.removeAttribute('href');}
-function setBusy(v){busy=v;input.disabled=v;format.disabled=v;convert.disabled=v||!selected;cancel.disabled=!v;}
+function clearResult(){resultPlayer.pause();resultPlayer.removeAttribute('src');resultPlayer.load();$('result-wrap').hidden=true;if(objectUrl){URL.revokeObjectURL(objectUrl);objectUrl=null;}download.hidden=true;download.removeAttribute('href');}
+function setBusy(v){busy=v;input.disabled=v;format.disabled=v;pitch.disabled=v;tempo.disabled=v;$('reset-transform').disabled=v;convert.disabled=v||!selected;cancel.disabled=!v;Array.from(document.querySelectorAll('#mp3-options input,#wav-options input,#flac-options input,#flac-options select,#rate-options select')).forEach(function(el){el.disabled=v;});}
 function fmtName(x){return {mp3:'MP3',wav:'WAV',flac:'FLAC'}[x]||'аудио';}
 function extName(name,ext){return (String(name||'').replace(/\.[^.]+$/,'').replace(/[\\/:*?"<>|]+/g,'_').trim()||'audio')+'.'+ext;}
 function radioValue(name){var el=document.querySelector('input[name="'+name+'"]:checked');return el?Number(el.value):0;}
 function sourceFormat(file){var m=/\.([^.]+)$/.exec(file&&file.name||'');return m?m[1].toLowerCase():'';}
+function neutral(){return Number(pitch.value)===0&&Number(tempo.value)===100;}
+function outputFormat(){return format.value==='same'?sourceFormat(selected):format.value;}
 function updateChoices(){
- var out=format.value;
- $('mp3-options').hidden=out!=='mp3';
- $('wav-options').hidden=out!=='wav';
- $('flac-options').hidden=out!=='flac';
- $('rate-options').hidden=out==='mp3';
+ var same=format.value==='same',out=outputFormat(),copy=same&&neutral();
+ $('mp3-options').hidden=copy||out!=='mp3';
+ $('wav-options').hidden=copy||out!=='wav';
+ $('flac-options').hidden=copy||out!=='flac';
+ $('rate-options').hidden=copy||['wav','flac'].indexOf(out)<0;
+ if(copy){quality.textContent='Оригинал будет скачан побайтово, без повторного кодирования.';return;}
+ if(['mp3','wav','flac'].indexOf(out)<0){quality.textContent='Для обработки этого формата выберите MP3, WAV или FLAC.';return;}
  if(out==='mp3')quality.textContent='MP3: сжатие с потерями. 320 кбит/с — наивысшее доступное качество, но не эквивалент FLAC.';
  if(out==='wav')quality.textContent='WAV: звук без сжатия, PCM 16 или 24 бит. Файл обычно значительно больше MP3 или FLAC.';
  if(out==='flac')quality.textContent='FLAC: сжатие без потерь. Разрядность 16/24 бит и уровень сжатия влияют на размер/время, а не на качество при одинаковой разрядности.';
@@ -35,16 +40,18 @@ function updateChoices(){
 }
 function choose(file){
  if(busy)return;
- clearResult();selected=file||null;progress.hidden=true;progress.value=0;
+ clearResult();if(originalUrl)URL.revokeObjectURL(originalUrl);originalUrl=null;originalPlayer.pause();originalPlayer.removeAttribute('src');originalPlayer.load();$('original-wrap').hidden=true;selected=file||null;progress.hidden=true;progress.value=0;
  if(!selected){info.textContent='Файл пока не выбран.';say('Ожидание файла.');convert.disabled=true;return;}
  info.textContent=selected.name+' · '+mb(selected.size);
  if(!selected.size){selected=null;say('Пустой файл. Выберите другой.');}
  else if(selected.size>120*1048576){selected=null;say('Файл превышает предел 120 МБ для браузерной обработки.');}
  else say(selected.size>30*1048576?'Крупный файл: на старом телефоне или планшете может не хватить памяти.':'Файл выбран. Настройте выходной формат и нажмите «Конвертировать».');
- convert.disabled=!selected;updateChoices();
+ if(selected){originalUrl=URL.createObjectURL(selected);originalPlayer.src=originalUrl;$('original-wrap').hidden=false;}convert.disabled=!selected;updateChoices();
 }
 input.addEventListener('change',function(){choose(input.files&&input.files[0]);});
 format.addEventListener('change',function(){clearResult();updateChoices();});
+function changeTransform(){var p=Number(pitch.value);$('pitch-label').textContent=(p>0?'+':'')+p+' полутонов';$('tempo-label').textContent=tempo.value+'%';clearResult();updateChoices();}
+pitch.addEventListener('input',changeTransform);tempo.addEventListener('input',changeTransform);$('reset-transform').addEventListener('click',function(){pitch.value=0;tempo.value=100;changeTransform();});
 ['dragenter','dragover'].forEach(function(n){drop.addEventListener(n,function(e){e.preventDefault();if(!busy)drop.classList.add('drag');});});
 ['dragleave','drop'].forEach(function(n){drop.addEventListener(n,function(e){e.preventDefault();drop.classList.remove('drag');});});
 drop.addEventListener('drop',function(e){if(!busy&&e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0]){input.value='';choose(e.dataTransfer.files[0]);}});
@@ -225,6 +232,21 @@ async function makeFlac(audio,bits,compression){
    F.FLAC__stream_encoder_delete(id);
  }
 }
+async function transformAudio(audio,p,t){
+ if(!p&&t===1)return audio;
+ say('Изменяем тональность и темп…');
+ const {SoundTouch,SimpleFilter}=await import('../singer-studio/vendor/soundtouch.js');
+ const rate=audio.sampleRate,length=audio.length,expected=Math.max(1,Math.round(length/t));
+ if(expected*audio.numberOfChannels*4>180*1048576)throw new Error('Слишком большой результат для браузера. Попробуйте меньший файл или компьютер.');
+ const left=audio.getChannelData(0),right=audio.numberOfChannels===2?audio.getChannelData(1):left,extended=length+Math.max(65536,Math.ceil(rate*2));
+ const source={extract(target,n,position){const count=Math.max(0,Math.min(n,extended-position)),real=Math.min(count,Math.max(0,length-position));for(let i=0;i<count;i++){target[i*2]=i<real?left[position+i]:0;target[i*2+1]=i<real?right[position+i]:0;}return count;}};
+ const processor=new SoundTouch();processor.stretch.setParameters(rate,0,0,8);processor.tempo=t;processor.pitchSemitones=p;
+ const filter=new SimpleFilter(source,processor),planes=Array.from({length:audio.numberOfChannels},()=>new Float32Array(expected)),block=new Float32Array(8192);
+ let at=0;while(at<expected){if(stopped)throw new Error('Отменено.');const n=filter.extract(block,Math.min(4096,expected-at));if(!n)break;for(let i=0;i<n;i++){planes[0][at+i]=block[i*2];if(planes.length===2)planes[1][at+i]=block[i*2+1];}at+=n;if(at%32768<4096){progress.value=10+Math.floor(17*at/expected);await tick();}}
+ if(at<expected)throw new Error('Не удалось полностью обработать запись.');
+ return pcm(planes,rate,audio.sourceBits);
+}
+function publishResult(blob,name,label){objectUrl=URL.createObjectURL(blob);download.href=objectUrl;download.download=name;download.textContent='Скачать '+label+' · '+mb(blob.size);download.hidden=false;resultPlayer.src=objectUrl;$('result-wrap').hidden=false;progress.hidden=false;progress.value=100;}
 function rateChoice(audio,targetFormat){
  if(targetFormat==='mp3')return 44100;
  var v=rateSelect.value;if(v==='original')return audio.sampleRate;
@@ -232,7 +254,9 @@ function rateChoice(audio,targetFormat){
 }
 convert.addEventListener('click',async function(){
  if(busy||!selected)return;
- var file=selected,out=format.value,ctx=null;
+ var file=selected,out=outputFormat(),ctx=null,p=Number(pitch.value),t=Number(tempo.value)/100;
+ if(format.value==='same'&&neutral()){clearResult();publishResult(file,file.name,'оригинал');say('Оригинал сохранён без изменений.');return;}
+ if(['mp3','wav','flac'].indexOf(out)<0){say('Выберите MP3, WAV или FLAC для обработки.');return;}
  stopped=false;clearResult();setBusy(true);progress.hidden=false;progress.value=2;
  try{
    var AudioCtx=root.AudioContext||root.webkitAudioContext;
@@ -246,16 +270,18 @@ convert.addEventListener('click',async function(){
    if(audio.numberOfChannels<1||audio.numberOfChannels>2)throw new Error('Пока поддерживаются моно и стерео.');
    if(!audio.sampleRate||audio.sampleRate>384000||audio.sampleRate<8000)throw new Error('Неизвестная или слишком высокая частота.');
    if(audio.duration>45*60)throw new Error('Файл длиннее 45 минут — разделите на части.');
+   var sourceBits=audio.sourceBits;
+   audio=await transformAudio(audio,p,t);
    var target=rateChoice(audio,out);
    if(target!==audio.sampleRate)audio=await resample(audio,target);
    if(stopped)throw new Error('Отменено.');
    progress.value=28;say('Создаём '+fmtName(out)+'…');
    var blob,description;
    if(out==='wav'){
-     var wavBits=radioValue('wav-bits')||16;
+     var wavBits=format.value==='same'&&sourceBits>16?24:radioValue('wav-bits')||16;
      blob=makeWav(audio,wavBits);description=wavBits+' бит, '+audio.sampleRate+' Гц';
    }else if(out==='flac'){
-     var flacBits=radioValue('flac-bits')||16,level=Number($('flac-compression').value)||0;
+     var flacBits=format.value==='same'&&sourceBits>16?24:radioValue('flac-bits')||16,level=Number($('flac-compression').value)||0;
      blob=await makeFlac(audio,flacBits,level);
      description=flacBits+' бит, '+audio.sampleRate+' Гц, сжатие '+level;
    }else{
@@ -264,9 +290,8 @@ convert.addEventListener('click',async function(){
    }
    if(stopped)throw new Error('Отменено.');
    if(!blob||!blob.size)throw new Error('Кодировщик вернул пустой файл.');
-   objectUrl=URL.createObjectURL(blob);
-   download.href=objectUrl;download.download=extName(file.name,out);download.textContent='Скачать '+fmtName(out)+' · '+mb(blob.size);
-   download.hidden=false;progress.value=100;
+   var suffix=(p?'_pitch'+(p>0?'+':'')+p:'')+(t!==1?'_tempo'+Math.round(t*100):'');
+   publishResult(blob,extName(file.name,out).replace(/\.[^.]+$/,suffix+'.'+out),fmtName(out));
    say('Готово: '+fmtName(out)+' · '+description+'. Скачайте полученный файл.');
  }catch(e){
    progress.hidden=true;say(e&&e.message==='Отменено.'?'Конвертация отменена.':'Ошибка: '+(e&&e.message?e.message:'не удалось создать файл.'));
@@ -275,6 +300,6 @@ convert.addEventListener('click',async function(){
    setBusy(false);
  }
 });
-root.addEventListener('pagehide',clearResult);
+root.addEventListener('pagehide',function(){clearResult();if(originalUrl)URL.revokeObjectURL(originalUrl);});
 updateChoices();
 })(window);
