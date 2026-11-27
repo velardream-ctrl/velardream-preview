@@ -145,6 +145,11 @@ const pilotCopy = {
   ru: ["Войдите в выданный тестовый аккаунт. Используйте вымышленные данные.", "Панель владельца"],
   en: ["Sign in with your provisioned test account. Use invented test details.", "Owner dashboard"],
 };
+const roleCopy = {
+  fi: ["Etsin apua", "Tarjoan apua", "Palvelun kunta"],
+  ru: ["Ищу помощь", "Предлагаю помощь", "Муниципалитет заявки"],
+  en: ["Find help", "Offer help", "Request municipality"],
+};
 function render() {
   document.documentElement.lang = locale;
   el("lang").value = locale;
@@ -153,6 +158,9 @@ function render() {
   let html = "<h1>" + t(0) + "</h1>";
   if (!pilot) html += '<a href="/">' + t(27) + "</a> ";
   if (me?.owner) html += ownerLink;
+  const [findHelp, offerHelp, orderMunicipality] = roleCopy[locale];
+  if (me) html += '<div class="actions"><a href="#customerOrders">' + findHelp +
+    '</a><a href="#providerProfile">' + offerHelp + '</a></div>';
   if (!me)
     html +=
       "<article><h2>" +
@@ -171,7 +179,7 @@ function render() {
       "</div></article>";
   else
     html +=
-      "<article><h2>" +
+      '<article id="providerProfile"><h2>' +
       t(12) +
       " · " +
       me.id +
@@ -199,9 +207,11 @@ function render() {
         '<input id="photo" type="file" accept="image/png,image/jpeg,image/webp">',
       ) +
       button(52) +
-      "</article><article><h2>" +
+      '</article><article id="customerOrders"><h2>' +
       t(17) +
-      "</h2>" +
+      '</h2><label><span id="orderMunicipalityLabel">' + orderMunicipality + '</span><select id="orderMunicipality" required></select></label>' +
+      field(13, '<select id="orderCity" required></select>') +
+      field(14, '<select id="orderCategory"></select>') +
       field(45, '<input type="number" id="labour" min="0" value="0">') +
       field(46, '<input type="number" id="expenses" min="0" value="0">') +
       field(
@@ -279,6 +289,20 @@ function render() {
       selectedCity: me.city,
     });
     showLanguageChoices(el("spokenLanguages"), locale, JSON.parse(me.languages || "[]"));
+    for (const category of cats.filter(c => !c.restricted)) {
+      el("orderCategory").add(new Option(category.icon + " " + category[locale], category.id));
+    }
+    el("orderCategory").value = me.category || 3;
+    setLocationSelects({
+      municipality: el("orderMunicipality"),
+      city: el("orderCity"),
+      label: el("orderMunicipalityLabel"),
+      locations,
+      locale,
+      required: true,
+      selectedCity: me.city,
+    });
+    el("orderMunicipalityLabel").textContent = orderMunicipality;
     el("available").checked = !!me.available;
   }
 }
@@ -513,8 +537,8 @@ el("app").onclick = async (e) => {
         end = stamp("orderEnd");
       if (!start || !end || end <= start) throw Error("Europe/Helsinki");
       const slot = {
-        city: val("city"),
-        category: Number(val("category")),
+        city: val("orderCity"),
+        category: Number(val("orderCategory")),
         start,
         end,
       };

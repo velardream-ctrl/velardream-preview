@@ -5,7 +5,7 @@ const server = process.argv.includes("--server");
 const output = new URL(server ? "./server-build/" : "./public-build/", root);
 await mkdir(output, { recursive: true });
 const files = [
-  "index.html", "account.html", "account.webmanifest", "account-worker.js", "profile-languages.mjs", "profile-tools.mjs", "availability.mjs", "helper-profile.js", "location-select.mjs", "finnish-cities.mjs", "logo.svg", "icon192.png", "icon512.png"
+  "index.html", "account.html", "account.webmanifest", "account-worker.js", "profile-languages.mjs", "service-categories.mjs", "profile-tools.mjs", "availability.mjs", "helper-profile.js", "location-select.mjs", "finnish-cities.mjs", "logo.svg", "icon192.png", "icon512.png"
 ];
 if (server) files.push(
   "dispatch.html",
