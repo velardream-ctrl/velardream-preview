@@ -89,10 +89,13 @@ test("synthetic account, permissions, persistence, concurrent claims and reset",
     403,
   );
   const locations = await (await api("locations")).json();
-  assert.deepEqual(locations.map(({ id }) => id), ["FI-091", "FI-167", "FI-260"]);
+  assert.equal(locations.length, 108);
+  assert.equal(new Set(locations.map(({ id }) => id)).size, 108);
+  for (const id of ["FI-091", "FI-167", "FI-260", "FI-638"])
+    assert.ok(locations.some((location) => location.id === id));
   assert.ok(locations.every(({ country, timezone }) =>
     country === "FI" && timezone === "Europe/Helsinki"));
-  for (const city of ["Porvoo", "Unknown"]) {
+  for (const city of ["Ilomantsi", "Unknown"]) {
     assert.equal((await api("profile", {
       alias: "Demo 1", city, category: 3, available: true, schedule,
     }, p)).status, 400);

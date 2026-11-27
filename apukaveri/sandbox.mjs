@@ -1,3 +1,4 @@
+import { setLocationSelects } from "./location-select.mjs";
 import { resolveHelsinki, helsinkiDate } from "./helsinki.mjs";
 import { uploadThumbnail, displayThumbnail } from "./profile-tools.mjs";
 const words = [
@@ -169,6 +170,7 @@ function render() {
       " · " +
       me.id +
       "</h2>" +
+      '<label><span id="municipalityLabel"></span><select id="municipality" required></select></label>' +
       field(
         13,
         '<select id="city" required></select>',
@@ -259,10 +261,15 @@ function render() {
     for (const c of cats.filter((c) => !c.restricted))
       el("category").add(new Option(c.icon + " " + c[locale], c.id));
     el("category").value = me.category || 3;
-    for (const location of locations) {
-      el("city").add(new Option(location[locale], location.city));
-    }
-    el("city").value = me.city;
+    setLocationSelects({
+      municipality: el("municipality"),
+      city: el("city"),
+      label: el("municipalityLabel"),
+      locations,
+      locale,
+      required: true,
+      selectedCity: me.city,
+    });
     el("available").checked = !!me.available;
   }
 }

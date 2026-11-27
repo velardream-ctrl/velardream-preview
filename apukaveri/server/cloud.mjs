@@ -43,7 +43,7 @@ export default {
 
 const publicPaths = new Set([
   "/", "/index.html", "/account.html", "/dispatch.html", "/sandbox.html",
-  "/availability.mjs", "/helper-profile.js", "/sandbox.mjs", "/owner.mjs",
+  "/location-select.mjs", "/finnish-cities.mjs", "/availability.mjs", "/helper-profile.js", "/sandbox.mjs", "/owner.mjs",
   "/profile-tools.mjs", "/helsinki.mjs", "/manifest.webmanifest", "/sw.js",
   "/logo.svg", "/icon192.png", "/icon512.png",
 ]);

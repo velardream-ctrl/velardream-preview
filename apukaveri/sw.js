@@ -1,8 +1,9 @@
 // Keep account and order responses out of the offline cache.
-const cacheName = "apukaveri-shell-005-" + self.registration.scope;
+const cacheName = "apukaveri-shell-006-" + self.registration.scope;
 const shell = [
   "sandbox.html",
   "sandbox.mjs",
+  "location-select.mjs",
   "profile-tools.mjs",
   "helsinki.mjs",
   "logo.svg",

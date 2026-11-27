@@ -6,7 +6,7 @@ const output = new URL(server ? "./server-build/" : "./public-build/", root);
 await mkdir(output, { recursive: true });
 const files = [
   "index.html", "account.html", "dispatch.html", "availability.mjs",
-  "helper-profile.js", "logo.svg", "icon192.png", "icon512.png"
+  "location-select.mjs", "finnish-cities.mjs", "helper-profile.js", "logo.svg", "icon192.png", "icon512.png"
 ];
 if (server) files.push(
   "sandbox.html", "sandbox.mjs", "admin.html", "owner.mjs",
