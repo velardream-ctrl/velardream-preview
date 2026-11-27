@@ -88,6 +88,18 @@ test("synthetic account, permissions, persistence, concurrent claims and reset",
     (await api("orders", { ...order, category: 1 }, customer)).status,
     403,
   );
+  const locations = await (await api("locations")).json();
+  assert.deepEqual(locations.map(({ id }) => id), ["FI-091", "FI-167", "FI-260"]);
+  assert.ok(locations.every(({ country, timezone }) =>
+    country === "FI" && timezone === "Europe/Helsinki"));
+  for (const city of ["Porvoo", "Unknown"]) {
+    assert.equal((await api("profile", {
+      alias: "Demo 1", city, category: 3, available: true, schedule,
+    }, p)).status, 400);
+    assert.equal((await api("search", { ...order, city }, customer)).status, 400);
+    assert.equal((await api("orders", { ...order, city }, customer)).status, 400);
+  }
+  assert.equal((await (await api("me", null, p)).json()).city, "Kitee");
   const make = async () =>
     (await (await api("orders", order, customer)).json()).id;
   const id = await make();

@@ -117,7 +117,8 @@ let draft = {},
   pixels = null;
 let locale = localStorage.getItem(key) || "fi",
   me = null,
-  cats = [];
+  cats = [],
+  locations = [];
 if (!langs.includes(locale)) locale = "fi";
 const t = (i) => words[i][langs.indexOf(locale)],
   el = (id) => document.getElementById(id);
@@ -170,7 +171,7 @@ function render() {
       "</h2>" +
       field(
         13,
-        '<select id="city"><option>Kitee</option><option>Joensuu</option><option>Helsinki</option></select>',
+        '<select id="city" required></select>',
       ) +
       field(14, '<select id="category"></select>') +
       field(15, '<input id="available" type="checkbox">') +
@@ -258,6 +259,9 @@ function render() {
     for (const c of cats.filter((c) => !c.restricted))
       el("category").add(new Option(c.icon + " " + c[locale], c.id));
     el("category").value = me.category || 3;
+    for (const location of locations) {
+      el("city").add(new Option(location[locale], location.city));
+    }
     el("city").value = me.city;
     el("available").checked = !!me.available;
   }
@@ -390,7 +394,7 @@ async function refresh() {
     ]),
   );
   draft.overrides ??= {};
-  cats = await api("categories");
+  [cats, locations] = await Promise.all([api("categories"), api("locations")]);
   render();
   await orders();
 }

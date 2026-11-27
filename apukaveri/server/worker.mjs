@@ -81,6 +81,9 @@ export default {
       if (env.MODE !== "synthetic")
         return json({ error: "sandbox disabled" }, 503);
       const sql = (query, ...args) => env.DB.prepare(query).bind(...args);
+      const activeCity = (city) =>
+        typeof city === "string" &&
+        sql("SELECT id FROM locations WHERE city=? AND active=1", city).first();
       const post = req.method === "POST";
       if (!post && req.method !== "GET") return json({}, 405);
       if (
@@ -121,6 +124,10 @@ export default {
         ).run();
         return code;
       }
+      if (path === "/api/locations" && !post)
+        return json(
+          (await sql("SELECT id,country,region,city,fi,ru,en,timezone FROM locations WHERE active=1 ORDER BY fi").all()).results,
+        );
       if (path === "/api/categories" && !post)
         return json(
           (await sql("SELECT * FROM categories ORDER BY id").all()).results,
@@ -291,7 +298,7 @@ export default {
       if (path === "/api/profile" && post) {
         if (
           !/^Demo [0-9]{1,5}$/.test(b.alias) ||
-          !["Kitee", "Joensuu", "Helsinki"].includes(b.city)
+          !(await activeCity(b.city))
         )
           return json({}, 400);
         if (
@@ -457,7 +464,7 @@ export default {
       if (path === "/api/orders" && post) {
         if (
           !["urgent", "planned", "listing"].includes(b.kind) ||
-          !["Kitee", "Joensuu", "Helsinki"].includes(b.city) ||
+          !(await activeCity(b.city)) ||
           !Number.isSafeInteger(b.start) ||
           !Number.isSafeInteger(b.end) ||
           b.start % 60000 ||
@@ -653,6 +660,7 @@ export default {
       }
       if (path === "/api/search" && post) {
         if (
+          !(await activeCity(b.city)) ||
           !Number.isSafeInteger(b.start) ||
           !Number.isSafeInteger(b.end) ||
           b.start < now ||
