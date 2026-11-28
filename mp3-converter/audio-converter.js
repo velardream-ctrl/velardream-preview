@@ -10,20 +10,21 @@ var input=$('file'),anyInput=$('file-any'),drop=$('drop'),info=$('fileinfo'),sta
  convert=$('convert'),cancel=$('cancel'),progress=$('progress'),download=$('download'),
  format=$('target-format'),quality=$('quality-hint'),rateSelect=$('target-rate');
 var pitch=$('pitch'),tempo=$('tempo'),originalPlayer=$('original-player'),resultPlayer=$('result-player'),originalUrl=null;
-var selected=null,busy=false,stopped=false,objectUrl=null,flacDecoderLoader=null,flacEncoderLoader=null;
+var selected=null,files=[],batchUrls=[],batchBytes=0,batchActive=false,busy=false,stopped=false,objectUrl=null,flacDecoderLoader=null,flacEncoderLoader=null;
 function say(s){status.textContent=s;}
 function tick(){return new Promise(function(ok){setTimeout(ok,0);});}
 function mb(n){return (n/1048576).toFixed(1)+' МБ';}
-function clearResult(){resultPlayer.pause();resultPlayer.removeAttribute('src');resultPlayer.load();$('result-wrap').hidden=true;if(objectUrl){URL.revokeObjectURL(objectUrl);objectUrl=null;}download.hidden=true;download.removeAttribute('href');}
+function clearResult(){batchUrls.forEach(function(u){URL.revokeObjectURL(u);});batchUrls=[];batchBytes=0;$('batch-output').textContent='';$('batch-results').hidden=true;resultPlayer.pause();resultPlayer.removeAttribute('src');resultPlayer.load();$('result-wrap').hidden=true;if(objectUrl){URL.revokeObjectURL(objectUrl);objectUrl=null;}download.hidden=true;download.removeAttribute('href');}
 function setBusy(v){busy=v;input.disabled=v;anyInput.disabled=v;format.disabled=v;pitch.disabled=v;tempo.disabled=v;$('reset-transform').disabled=v;convert.disabled=v||!selected;cancel.disabled=!v;Array.from(document.querySelectorAll('#mp3-options input,#wav-options input,#flac-options input,#flac-options select,#rate-options select')).forEach(function(el){el.disabled=v;});}
 function fmtName(x){return {mp3:'MP3',wav:'WAV',flac:'FLAC'}[x]||'аудио';}
 function extName(name,ext){return (String(name||'').replace(/\.[^.]+$/,'').replace(/[\\/:*?"<>|]+/g,'_').trim()||'audio')+'.'+ext;}
 function radioValue(name){var el=document.querySelector('input[name="'+name+'"]:checked');return el?Number(el.value):0;}
 function sourceFormat(file){var m=/\.([^.]+)$/.exec(file&&file.name||'');return m?m[1].toLowerCase():'';}
 function neutral(){return Number(pitch.value)===0&&Number(tempo.value)===100;}
-function outputFormat(){return format.value==='same'?sourceFormat(selected):format.value;}
+function outputFormat(file){return format.value==='same'?sourceFormat(file||selected):format.value;}
 function updateChoices(){
  var same=format.value==='same',out=outputFormat(),copy=same&&neutral();
+ if(files.length>1){var outs=files.map(function(f){return outputFormat(f);});$('mp3-options').hidden=copy||outs.indexOf('mp3')<0;$('wav-options').hidden=copy||outs.indexOf('wav')<0;$('flac-options').hidden=copy||outs.indexOf('flac')<0;$('rate-options').hidden=copy||outs.indexOf('wav')<0&&outs.indexOf('flac')<0;quality.textContent=copy?'Все оригиналы сохраняются без повторного кодирования.':'Общие настройки применяются к каждой записи. Неподдерживаемые форматы будут отмечены отдельно.';return;}
  $('mp3-options').hidden=copy||out!=='mp3';
  $('wav-options').hidden=copy||out!=='wav';
  $('flac-options').hidden=copy||out!=='flac';
@@ -38,17 +39,26 @@ function updateChoices(){
    var high=document.querySelector('input[name="bitrate"][value="320"]');if(high)high.checked=true;
  }
 }
-function choose(file){
+function choose(list){
  if(busy)return;
- clearResult();if(originalUrl)URL.revokeObjectURL(originalUrl);originalUrl=null;originalPlayer.pause();originalPlayer.removeAttribute('src');originalPlayer.load();$('original-wrap').hidden=true;selected=file||null;progress.hidden=true;progress.value=0;
- if(!selected){info.textContent='Файл пока не выбран.';say('Ожидание файла.');convert.disabled=true;return;}
- info.textContent=selected.name+' · '+mb(selected.size);
- if(!selected.size){selected=null;say('Пустой файл. Выберите другой.');}
- else if(selected.size>120*1048576){selected=null;say('Файл превышает предел 120 МБ для браузерной обработки.');}
- else say(selected.size>30*1048576?'Крупный файл: на старом телефоне или планшете может не хватить памяти.':'Файл выбран. Настройте выходной формат и нажмите «Конвертировать».');
- if(selected){try{originalUrl=URL.createObjectURL(selected);originalPlayer.src=originalUrl;$('original-wrap').hidden=false;}catch(e){say('Файл выбран. Предпросмотр недоступен, можно попробовать конвертацию.');}}convert.disabled=!selected;updateChoices();
+ clearResult();if(originalUrl)URL.revokeObjectURL(originalUrl);originalUrl=null;originalPlayer.pause();originalPlayer.removeAttribute('src');originalPlayer.load();$('original-wrap').hidden=true;
+ files=Array.from(list||[]);selected=files[0]||null;progress.hidden=true;progress.value=0;
+ $('batch-selection').hidden=files.length<2;$('batch-files').textContent='';
+ if(!selected){info.textContent='Файл пока не выбран.';say('Ожидание файла.');convert.disabled=true;convert.textContent='Конвертировать';return;}
+ if(files.length>20){files=[];selected=null;info.textContent='Выбрано больше 20 файлов.';$('batch-selection').hidden=true;say('Выберите до 20 файлов за один запуск.');convert.disabled=true;return;}
+ if(files.length>1){
+   info.textContent='Выбрано: '+files.length+' · '+mb(files.reduce(function(n,f){return n+f.size;},0));
+   files.forEach(function(f){var li=document.createElement('li');li.textContent=f.name+' · '+mb(f.size);$('batch-files').appendChild(li);});
+   say('Выберите общие настройки. Ошибка одного файла не остановит остальные.');
+ }else{
+   info.textContent=selected.name+' · '+mb(selected.size);
+   if(!selected.size||selected.size>120*1048576){files=[];selected=null;say('Пустой файл или превышен предел 120 МБ. Выберите другой.');}
+   else{say(selected.size>30*1048576?'Крупный файл: на старом телефоне или планшете может не хватить памяти.':'Файл выбран. Настройте выходной формат и нажмите «Конвертировать».');
+   try{originalUrl=URL.createObjectURL(selected);originalPlayer.src=originalUrl;$('original-wrap').hidden=false;}catch(e){say('Файл выбран. Предпросмотр недоступен, можно попробовать конвертацию.');}}
+ }
+ convert.textContent=files.length>1?'Конвертировать все ('+files.length+')':'Конвертировать';convert.disabled=!selected;updateChoices();
 }
-function pickFrom(control){var picked=control.files&&control.files[0];if(picked){choose(picked);control.value='';}}
+function pickFrom(control){if(control.files&&control.files.length){choose(control.files);control.value='';}}
 input.addEventListener('change',function(){pickFrom(input);});
 anyInput.addEventListener('change',function(){pickFrom(anyInput);});
 format.addEventListener('change',function(){clearResult();updateChoices();});
@@ -56,7 +66,7 @@ function changeTransform(){var p=Number(pitch.value);$('pitch-label').textConten
 pitch.addEventListener('input',changeTransform);tempo.addEventListener('input',changeTransform);$('reset-transform').addEventListener('click',function(){pitch.value=0;tempo.value=100;changeTransform();});
 ['dragenter','dragover'].forEach(function(n){drop.addEventListener(n,function(e){e.preventDefault();if(!busy)drop.classList.add('drag');});});
 ['dragleave','drop'].forEach(function(n){drop.addEventListener(n,function(e){e.preventDefault();drop.classList.remove('drag');});});
-drop.addEventListener('drop',function(e){if(!busy&&e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0]){input.value='';choose(e.dataTransfer.files[0]);}});
+drop.addEventListener('drop',function(e){if(!busy&&e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0]){input.value='';choose(e.dataTransfer.files);}});
 cancel.addEventListener('click',function(){stopped=true;say('Отменяем обработку…');});
 function readBytes(file){if(typeof file.arrayBuffer==='function')return file.arrayBuffer();return new Promise(function(ok,bad){var r=new FileReader();r.onload=function(){ok(r.result);};r.onerror=function(){bad(new Error('Ошибка чтения файла.'));};r.readAsArrayBuffer(file);});}
 function pcm(channels,rate,sourceBits){return {sampleRate:rate,numberOfChannels:channels.length,length:channels[0].length,duration:channels[0].length/rate,sourceBits:sourceBits||null,getChannelData:function(i){return channels[i];}};}
@@ -254,13 +264,12 @@ function rateChoice(audio,targetFormat){
  var v=rateSelect.value;if(v==='original')return audio.sampleRate;
  return Number(v)||audio.sampleRate;
 }
-convert.addEventListener('click',async function(){
- if(busy||!selected)return;
- var file=selected,out=outputFormat(),ctx=null,p=Number(pitch.value),t=Number(tempo.value)/100;
- if(format.value==='same'&&neutral()){clearResult();publishResult(file,file.name,'оригинал');say('Оригинал сохранён без изменений.');return;}
- if(['mp3','wav','flac'].indexOf(out)<0){say('Выберите MP3, WAV или FLAC для обработки.');return;}
- stopped=false;clearResult();setBusy(true);progress.hidden=false;progress.value=2;
+async function convertOne(file){
+ var out=outputFormat(file),ctx=null,p=Number(pitch.value),t=Number(tempo.value)/100;
+ if(format.value==='same'&&neutral()){if(!file.size||file.size>120*1048576)throw new Error('Пустой файл или превышен предел 120 МБ.');return {blob:file,name:file.name,label:'оригинал',description:'Без повторного кодирования'};}
+ if(['mp3','wav','flac'].indexOf(out)<0)throw new Error('Выберите MP3, WAV или FLAC для обработки.');
  try{
+   if(!file.size||file.size>120*1048576)throw new Error('Пустой файл или превышен предел 120 МБ.');
    var AudioCtx=root.AudioContext||root.webkitAudioContext;
    if(!AudioCtx)throw new Error('В этом браузере недоступна обработка аудио.');
    ctx=new AudioCtx();
@@ -293,14 +302,58 @@ convert.addEventListener('click',async function(){
    if(stopped)throw new Error('Отменено.');
    if(!blob||!blob.size)throw new Error('Кодировщик вернул пустой файл.');
    var suffix=(p?'_pitch'+(p>0?'+':'')+p:'')+(t!==1?'_tempo'+Math.round(t*100):'');
-   publishResult(blob,extName(file.name,out).replace(/\.[^.]+$/,suffix+'.'+out),fmtName(out));
-   say('Готово: '+fmtName(out)+' · '+description+'. Скачайте полученный файл.');
- }catch(e){
-   progress.hidden=true;say(e&&e.message==='Отменено.'?'Конвертация отменена.':'Ошибка: '+(e&&e.message?e.message:'не удалось создать файл.'));
- }finally{
-   if(ctx&&typeof ctx.close==='function')try{await ctx.close();}catch(e){}
-   setBusy(false);
- }
+   return {blob:blob,name:extName(file.name,out).replace(/\.[^.]+$/,suffix+'.'+out),label:fmtName(out),description:description};
+ }finally{if(ctx&&typeof ctx.close==='function')try{await ctx.close();}catch(e){}}
+}
+function uniqueName(name,used){
+ var base=name.replace(/\.[^.]+$/,''),ext=name.slice(base.length),candidate=name,n=2;
+ while(used[candidate.toLowerCase()])candidate=base+' ('+n+++')'+ext;
+ used[candidate.toLowerCase()]=true;return candidate;
+}
+function batchRow(file,result,error,used){
+ var row=document.createElement('div'),title=document.createElement('strong'),note=document.createElement('p');
+ title.textContent=file.name;row.appendChild(title);row.appendChild(note);
+ if(result){
+   var name=uniqueName(result.name,used),url=URL.createObjectURL(result.blob),link=document.createElement('a');
+   batchUrls.push(url);batchBytes+=result.blob.size;note.textContent='Готово · '+name+' · '+mb(result.blob.size);
+   link.className='download';link.href=url;link.download=name;link.textContent='Скачать '+result.label;row.appendChild(link);
+ }else note.textContent=error;
+ $('batch-output').appendChild(row);
+}
+convert.addEventListener('click',async function(){
+ if(busy||!selected)return;
+ stopped=false;clearResult();setBusy(true);progress.hidden=false;progress.value=2;
+ var queue=files.slice(),batch=queue.length>1,done=0,errors=0,processed=0,used=Object.create(null),memoryStop=false;
+ batchActive=batch;
+ if(batch){$('batch-results').hidden=false;$('batch-progress').value=0;}
+ try{
+   for(var i=0;i<queue.length;i++){
+     if(stopped)break;
+     var file=queue[i];
+     if(batch){$('batch-summary').textContent='Файл '+(i+1)+' из '+queue.length+': '+file.name;progress.value=0;}
+     try{
+       var result=await convertOne(file);
+       if(stopped)break;
+       if(batch){
+         // Keep decoded PCM for only one song at a time. Bound retained output.
+         if(batchBytes+result.blob.size>256*1048576){batchRow(file,null,'Не обработан: достигнут предел 256 МБ готовых файлов. Скачайте готовые записи и запустите оставшиеся отдельно.',used);memoryStop=true;break;}
+         batchRow(file,result,null,used);
+       }else{publishResult(result.blob,result.name,result.label);say('Готово: '+result.label+' · '+result.description+'. Скачайте полученный файл.');}
+       done++;
+     }catch(e){
+       if(stopped)break;
+       errors++;var detail='Ошибка: '+(e&&e.message?e.message:'не удалось создать файл.');
+       if(batch)batchRow(file,null,detail,used);else say(detail);
+     }finally{result=null;}
+     processed++;if(batch){$('batch-progress').value=Math.round(100*processed/queue.length);await tick();}
+   }
+   if(batch){
+     var summary='Готово: '+done+' из '+queue.length+' · ошибок: '+errors;
+     if(stopped||memoryStop)summary+=' · не завершено: '+(queue.length-processed);
+     $('batch-summary').textContent=summary;say(summary+(stopped?' · остановлено.':memoryStop?' · предел памяти.':'.'));
+     progress.hidden=true;
+   }else if(stopped){say('Конвертация отменена.');progress.hidden=true;}else if(errors)progress.hidden=true;
+ }finally{batchActive=false;setBusy(false);}
 });
 root.addEventListener('pagehide',function(){clearResult();if(originalUrl)URL.revokeObjectURL(originalUrl);});
 updateChoices();
