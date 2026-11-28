@@ -121,7 +121,8 @@ let draft = {},
 let locale = localStorage.getItem(key) || "fi",
   me = null,
   cats = [],
-  locations = [];
+  locations = [],
+  repeatTarget = null;
 if (!langs.includes(locale)) locale = "fi";
 const t = (i) => words[i][langs.indexOf(locale)],
   el = (id) => document.getElementById(id);
@@ -142,11 +143,11 @@ async function api(name, data) {
     const detail = await r.json().catch(() => null);
     if (detail?.error === "test_wallet_insufficient") throw Error(walletCopy[locale][7]);
     if (detail?.error === "test_payment_required") throw Error(walletCopy[locale][8]);
-    if (detail?.error === "helper_unavailable") throw Error({
+    if (detail?.error === "helper_unavailable") throw Object.assign(Error({
       fi: "Tekijä ei ole vapaa koko valituksi ajaksi.",
       ru: "Исполнитель недоступен на весь выбранный период.",
       en: "The helper is unavailable for the full selected period.",
-    }[locale]);
+    }[locale]), { code: detail.error });
     throw Error(String(r.status));
   }
   return r.json();
@@ -210,6 +211,7 @@ async function refreshWallet() {
   }));
 }
 function render() {
+  repeatTarget = null;
   document.documentElement.lang = locale;
   el("lang").value = locale;
   const pilot = location.protocol === "https:";
@@ -300,7 +302,10 @@ function render() {
       field(60, '<input type="time" id="orderEnd" value="13:00">') +
       "</div>" +
       field(61, '<input id="fold" type="checkbox">') +
-      '<div id="matches"></div><div class="actions">' +
+      '<div id="repeatOrder" hidden><p role="status"></p><div class="actions">' +
+      '<button data-send-repeat="1">' + repeatCopy[locale][2] + '</button>' +
+      '<button data-search-alternatives="1">' + repeatCopy[locale][3] + '</button></div></div>' +
+      '<div id="matches" aria-live="polite"></div><div class="actions">' +
       button(31) +
       button(38) +
       button(18) +
@@ -397,6 +402,32 @@ async function refreshUnread() {
   const summary = [t(64) + " · " + inbox.unread, ...earnings].join(" · ");
   if (badge.textContent !== summary) badge.textContent = summary;
 }
+const repeatCopy = {
+  fi: ["Pyydä samaa tekijää uudelleen", "Valitse uusi aika ja tarkista hinta.", "Lähetä samalle tekijälle", "Etsi muita tekijöitä", "Odotetaan tekijän vastausta.", "Ajankohta meni ohi. Kukaan ei ottanut pyyntöä vastaan.", "Valitse uusi aika", "Ei vapaita tekijöitä valittuna aikana. Kokeile toista aikaa."],
+  ru: ["Позвать снова", "Выберите новое время и проверьте цену.", "Отправить тому же помощнику", "Найти других помощников", "Ждём, пока помощник примет заявку.", "Выбранное время прошло. Никто не принял заявку.", "Выбрать новое время", "На это время нет свободных помощников. Попробуйте другое время."],
+  en: ["Invite again", "Choose a new time and check the price.", "Send to the same helper", "Find other helpers", "Waiting for a helper to accept.", "The requested time passed without an acceptance.", "Choose a new time", "No helpers are available at this time. Try another time."],
+};
+function openOrderDraft(order, target) {
+  repeatTarget = target;
+  setLocationSelects({
+    municipality: el("orderMunicipality"), city: el("orderCity"),
+    label: el("orderMunicipalityLabel"), locations, locale,
+    required: true, selectedCity: order.city,
+  });
+  el("orderCategory").value = order.category;
+  el("orderDate").value = helsinkiDate(Date.now() + 86400000);
+  el("fold").checked = false;
+  el("labour").value = order.labour;
+  el("expenses").value = 0;
+  el("model").value = "online";
+  el("matches").replaceChildren();
+  const panel = el("repeatOrder");
+  panel.hidden = !target;
+  panel.querySelector("p").textContent = repeatCopy[locale][1];
+  el("orderDate").focus();
+  el("orderDate").scrollIntoView({block: "center"});
+}
+
 async function orders() {
   const ul = el("orders");
   if (!ul) return;
@@ -433,6 +464,26 @@ async function orders() {
     const helperDone = row.confirmations.some(c =>
       c.actor === row.provider && c.topic === "completion" && c.answer === "yes");
     const alreadyAnswered = row.confirmations.some(c => c.actor === me.id && c.topic === "completion");
+    const completed = !disputed &&
+      row.confirmations.filter(c => c.topic === "completion" && c.answer === "yes").length === 2;
+    const copy = repeatCopy[locale];
+    if (buyer && !row.cancelled && (completed || (!row.provider && row.kind !== "listing"))) {
+      const expired = !row.provider && row.start <= Date.now();
+      if (!completed) {
+        const status = document.createElement("p");
+        status.textContent = copy[expired ? 5 : 4];
+        li.append(status);
+      }
+      if (completed || expired) {
+        const restart = document.createElement("button");
+        restart.textContent = copy[completed ? 0 : 6];
+        restart.addEventListener("click", event => {
+          event.stopPropagation();
+          openOrderDraft(row, completed ? row.provider : null);
+        });
+        li.append(restart);
+      }
+    }
     const gross = row.labour + row.reimbursement;
     const amounts = document.createElement("p");
     amounts.textContent = [
@@ -659,7 +710,9 @@ el("app").onclick = async (e) => {
         languages: readLanguageChoices(el("spokenLanguages")),
         schedule: draft,
       });
-    if (i === 18 || i === 38 || i === 31 || e.target.dataset.book) {
+    const sendRepeat = e.target.dataset.sendRepeat && repeatTarget;
+    const search = i === 31 || e.target.dataset.searchAlternatives;
+    if (i === 18 || i === 38 || search || e.target.dataset.book || sendRepeat) {
       const stamp = (id) =>
           resolveHelsinki(val("orderDate"), val(id), el("fold").checked),
         start = stamp("orderStart"),
@@ -671,12 +724,14 @@ el("app").onclick = async (e) => {
         start,
         end,
       };
-      if (i === 31) {
+      if (search) {
+        repeatTarget = null;
+        el("repeatOrder").hidden = true;
         const matches = await api("search", slot),
           favs = await api("favourites"),
           holder = el("matches");
         holder.replaceChildren();
-        if (!matches.length) holder.textContent = t(41);
+        if (!matches.length) holder.textContent = repeatCopy[locale][7];
         for (const m of matches) {
           const div = document.createElement("p");
           const score = m.rating_count
@@ -694,20 +749,37 @@ el("app").onclick = async (e) => {
           div.append(fav, book);
           holder.append(div);
         }
-      } else
-        await api("orders", {
-          ...slot,
-          labour: Number(val("labour")),
-          reimbursement: Number(val("expenses")),
-          model: val("model"),
-          kind: e.target.dataset.book
-            ? "planned"
-            : i === 38
-              ? "listing"
-              : "urgent",
-          audience: e.target.dataset.book ? "all" : val("audience"),
-          target: e.target.dataset.book ? Number(e.target.dataset.book) : null,
-        });
+      } else {
+        const target = sendRepeat || Number(e.target.dataset.book) || null;
+        e.target.disabled = true;
+        try {
+          await api("orders", {
+            ...slot,
+            labour: Number(val("labour")),
+            reimbursement: Number(val("expenses")),
+            model: val("model"),
+            kind: target
+              ? "planned"
+              : i === 38
+                ? "listing"
+                : "urgent",
+            audience: target ? "all" : val("audience"),
+            target,
+          });
+          repeatTarget = null;
+          el("repeatOrder").hidden = true;
+          el("matches").replaceChildren();
+        } catch (error) {
+          if (sendRepeat && error.code === "helper_unavailable") {
+            el("repeatOrder").querySelector("p").textContent =
+              error.message + " " + repeatCopy[locale][1];
+            return;
+          }
+          throw error;
+        } finally {
+          e.target.disabled = false;
+        }
+      }
     }
     if (e.target.dataset.fav) {
       const enabled = e.target.dataset.enabled === "true";
