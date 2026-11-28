@@ -37,23 +37,21 @@ header nav{display:flex;flex-wrap:nowrap;align-items:center;gap:6px;white-space:
   <p class="muted" data-t="intermediary"></p>
   <p><a class="account-link" href="/account.html" data-t="account"></a></p>
   <p id="serverLink" hidden><a class="account-link" href="/sandbox.html" data-t="sandbox"></a></p>
-  <h2 data-t="categories"></h2><div id="categories" class="categories"></div>
   <div class="filters" style="grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr))">
     <label class="field"><span data-t="service"></span><select id="service"></select></label>
-    <label class="field"><span id="municipalityLabel"></span><select id="municipality"></select></label>
     <label class="field"><span data-t="city"></span><select id="city"></select></label>
   </div>
-  <h2 id="catalogTitle" data-t="catalog"></h2><p id="emptyCatalog" class="panel muted" data-t="empty"></p><article class="panel" id="ownProfile" hidden></article>
+  <h2 id="catalogTitle" tabindex="-1" data-t="catalog"></h2><p id="emptyCatalog" class="panel muted" data-t="empty"></p><article class="panel" id="ownProfile" hidden></article>
+  <h2 data-t="categories"></h2><div id="categories" class="categories"></div>
 </main>
 <script src="/helper-profile.js"></script><script type="module">
 import { serviceCategories as cats } from "./service-categories.mjs";
 import { finnishCities } from "./finnish-cities.mjs";
-import { setLocationSelects } from "./location-select.mjs";
 
 const translations = {
   fi: {
     headline: "Apua lähellä, kun sitä tarvitset.", intro: "Apukaveri auttaa löytämään apua arjen askareisiin.",
-    categories: "Mihin tarvitset apua?", service: "Palvelu", all: "Kaikki palvelut", city: "Kaupunki",
+    categories: "Mihin tarvitset apua?", service: "Palvelu", all: "Kaikki palvelut", city: "Kaupunki", allCities: "Kaikki kaupungit",
     catalog: "Apukaverit", empty: "Julkaistuja auttajaprofiileja ei vielä ole.",
     own: "Oma profiili", preview: "Esikatselu tässä selaimessa", noMatch: "Oma profiilisi ei vastaa valittuja suodattimia.",
     status: "Valmistelemme palvelun avaamista. Rekisteröinti ja varaukset avataan myöhemmin.",
@@ -62,7 +60,7 @@ const translations = {
   },
   ru: {
     headline: "Помощь рядом, когда она нужна.", intro: "Apukaveri помогает найти поддержку в повседневных делах.",
-    categories: "Чем вам помочь?", service: "Услуга", all: "Все услуги", city: "Город",
+    categories: "Чем вам помочь?", service: "Услуга", all: "Все услуги", city: "Город", allCities: "Все города",
     catalog: "Каталог помощников", empty: "Опубликованных анкет помощников пока нет.",
     own: "Моя анкета", preview: "Предпросмотр в этом браузере", noMatch: "Ваша анкета не подходит под выбранные фильтры.",
     status: "Готовим сайт к запуску. Регистрация и заявки откроются позже.",
@@ -71,7 +69,7 @@ const translations = {
   },
   en: {
     headline: "Help nearby, when you need it.", intro: "Apukaveri helps you find support with everyday tasks.",
-    categories: "What do you need help with?", service: "Service", all: "All services", city: "City",
+    categories: "What do you need help with?", service: "Service", all: "All services", city: "City", allCities: "All cities",
     catalog: "Find a helper", empty: "No helper profiles have been published yet.",
     own: "My profile", preview: "Preview in this browser", noMatch: "Your profile does not match the selected filters.",
     status: "We are preparing to launch. Registration and bookings will open later.",
@@ -92,11 +90,9 @@ function renderOwnProfile() {
   const allServices = helperProfile.read();
   const service = el("service").value;
   const place = finnishCities.find(city => city.city === profile.city);
-  const municipality = el("municipality").value;
   const city = el("city").value;
   const services = allServices.filter(item => !service || item.service === service);
-  const matches = services.length > 0 &&
-    (!municipality || place?.id === municipality) && (!city || place?.city === city);
+  const matches = services.length > 0 && (!city || place?.city === city);
   const card = el("ownProfile");
   const empty = el("emptyCatalog");
   empty.hidden = matches;
@@ -139,6 +135,7 @@ function renderCategories() {
     button.onclick = () => {
       el("service").value = id === selected ? "" : id;
       renderCategories();
+      el("catalogTitle").focus();
     };
     return button;
   }));
@@ -165,10 +162,13 @@ function render() {
     new Option(category[1] + " " + category[labelIndex], category[0]),
   ));
   service.value = selected;
-  setLocationSelects({
-    municipality: el("municipality"), city: el("city"), label: el("municipalityLabel"),
-    locations: finnishCities, locale: lang, onChange: renderOwnProfile,
-  });
+  const city = el("city");
+  const selectedCity = city.value;
+  const cities = [...finnishCities].sort((a, b) => a[lang].localeCompare(b[lang], lang));
+  city.replaceChildren(new Option(t.allCities, ""), ...cities.map(place =>
+    new Option(place[lang], place.city),
+  ));
+  city.value = selectedCity;
   renderCategories();
 }
 
@@ -182,6 +182,7 @@ el("style").onclick = () => {
   render();
 };
 el("service").onchange = renderCategories;
+el("city").onchange = renderOwnProfile;
 window.addEventListener("pageshow", renderOwnProfile);
 window.addEventListener("storage", renderOwnProfile);
 render();
