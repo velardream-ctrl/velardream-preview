@@ -285,6 +285,26 @@ async function render() {
     '</h2><div class="scroll" id="helpers"></div></section><section><h2>' +
     t(16) +
     '</h2><div class="scroll" id="events"></div></section><output id="status" aria-live="polite"></output>';
+  const reviewText = {
+    fi: ["Tarkistettavat testimaksut", "Riita", "Vahvistus puuttuu", "Vapauta katevaraus"],
+    en: ["Test payments to review", "Dispute", "Confirmation overdue", "Release card hold"],
+    ru: ["Тестовые платежи на проверке", "Спор", "Нет подтверждения", "Снять резерв"],
+  }[lang];
+  const review = document.createElement("section");
+  const heading = document.createElement("h2");
+  heading.textContent = reviewText[0];
+  review.append(heading);
+  for (const order of r.orders.filter(o =>
+    ["reserved", "expired"].includes(o.card_status) && (o.disputed || o.review_overdue))) {
+    const row = document.createElement("p");
+    row.textContent = "#" + order.id + " · " + reviewText[order.disputed ? 1 : 2] + " ";
+    const release = document.createElement("button");
+    release.dataset.releasePayment = order.id;
+    release.textContent = reviewText[3];
+    row.append(release);
+    review.append(row);
+  }
+  if (review.children.length > 1) el("panel").prepend(review);
   el("csv").href = "/api/admin/export?" + filters;
   for (const f of ["city", "category", "helper"])
     el(f).value = filters.get(f) || "";
@@ -358,6 +378,8 @@ el("panel").onclick = async (e) => {
     n = (id) => Number(el(id).value);
   e.target.disabled = true;
   try {
+    if (e.target.dataset.releasePayment)
+      await api("admin/release-test-payment", {id: Number(e.target.dataset.releasePayment)});
     if (id === "customer-fee-preview") {
       const inputs = customerFeeFields.map((name) => el("estimate-" + name));
       if (inputs.some((input) => !input.value || !input.checkValidity()))

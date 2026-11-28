@@ -411,7 +411,7 @@ export default {
       if (path === "/api/orders" && !post) {
         const rows = (
           await sql(
-            "SELECT orders.*,(SELECT stars FROM ratings WHERE order_id=orders.id) AS stars,EXISTS(SELECT 1 FROM test_wallet_entries WHERE ref='payment-'||orders.id) AS wallet_paid FROM orders WHERE customer=? OR provider=? OR (cancelled=0 AND customer<>? AND provider IS NULL AND (target IS NULL OR target=?) AND " +
+            "SELECT orders.*,(SELECT stars FROM ratings WHERE order_id=orders.id) AS stars,EXISTS(SELECT 1 FROM test_wallet_entries WHERE ref='payment-'||orders.id) AS wallet_paid,(SELECT CASE WHEN status='reserved' AND expires<=unixepoch() THEN 'expired' ELSE status END FROM test_card_payments WHERE order_id=orders.id) AS card_status FROM orders WHERE customer=? OR provider=? OR (cancelled=0 AND customer<>? AND provider IS NULL AND (target IS NULL OR target=?) AND " +
               audience +
               " AND EXISTS(SELECT 1 FROM profiles p WHERE p.user=? AND p.available=1 AND p.city=orders.city AND p.category=orders.category))",
             user.id,
@@ -468,7 +468,11 @@ export default {
         const canReceive = await offerAvailability();
         const items = rows.filter(row => row.provider === user.id || canReceive(row))
           .map(({ order_id, seen }) => ({ order_id, seen }));
-        return json({ unread: items.filter((i) => !i.seen).length, items });
+        const earnings = (await sql(
+          "SELECT order_id,cents FROM test_wallet_entries WHERE account=? AND kind='earning' ORDER BY id DESC LIMIT 20",
+          user.id,
+        ).all()).results;
+        return json({ unread: items.filter((i) => !i.seen).length, items, ...(earnings.length ? { earnings } : {}) });
       }
       if (path === "/api/offers/view" && post) {
         const result = await sql(

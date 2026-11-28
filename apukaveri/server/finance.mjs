@@ -13,19 +13,28 @@ export async function finance(path, post, b, user, sql, db, json, url, requireTe
       user.id,
     ).first();
     if (!order) return json({}, 403);
-    if (requireTestPayment && b.topic === "completion" && b.answer === "yes" &&
+    const card = await sql("SELECT status FROM test_card_payments WHERE order_id=?", order.id).first();
+    if (b.topic === "completion" && b.answer === "yes" &&
         order.model === "online" && order.labour + order.reimbursement > 0 &&
-        !(await sql("SELECT 1 AS paid FROM test_wallet_entries WHERE ref=?", "payment-" + order.id).first())) {
+        requireTestPayment &&
+        !card && !(await sql("SELECT 1 AS paid FROM test_wallet_entries WHERE ref=?", "payment-" + order.id).first())) {
       return json({ error: "test_payment_required" }, 409);
     }
     if (b.topic === "cash" && !["cash", "split"].includes(order.model))
       return json({}, 400);
     await sql(
-      "INSERT OR IGNORE INTO confirmations SELECT id,?,?,? FROM orders WHERE id=? AND cancelled=0",
+      `INSERT OR IGNORE INTO confirmations SELECT id,?,?,? FROM orders o WHERE id=? AND cancelled=0
+       AND NOT EXISTS(SELECT 1 FROM test_card_payments p WHERE p.order_id=o.id AND
+         (p.status<>'reserved' OR (?='yes' AND (p.expires<=unixepoch()
+           OR EXISTS(SELECT 1 FROM confirmations WHERE order_id=o.id AND answer='dispute')
+           OR (?=o.customer AND NOT EXISTS(SELECT 1 FROM confirmations
+             WHERE order_id=o.id AND actor=o.provider AND topic='completion' AND answer='yes'))))))`,
       user.id,
       b.topic,
       b.answer,
       order.id,
+      b.answer,
+      user.id,
     ).run();
     const row = await sql(
       "SELECT answer FROM confirmations WHERE order_id=? AND actor=? AND topic=?",
@@ -44,6 +53,16 @@ export async function finance(path, post, b, user, sql, db, json, url, requireTe
       kind,
       detail,
     );
+  if (path === "/api/admin/release-test-payment" && post) {
+    const result = await sql(
+      `UPDATE orders SET cancelled=? WHERE id=? AND cancelled=0
+       AND EXISTS(SELECT 1 FROM test_card_payments WHERE order_id=orders.id AND status='reserved')
+       AND (end < (unixepoch()-86400)*1000 OR EXISTS(
+         SELECT 1 FROM confirmations WHERE order_id=orders.id AND answer='dispute'))`,
+      user.id, b.id,
+    ).run();
+    return json({}, result.meta.changes ? 200 : 409);
+  }
   if (path === "/api/admin/customer-fee-preview" && post) {
     const { labour, reimbursement, processing } = b;
     if (![labour, reimbursement, processing].every(
@@ -134,7 +153,7 @@ export async function finance(path, post, b, user, sql, db, json, url, requireTe
       refund:
         "COALESCE((SELECT sum(CASE kind WHEN 'fee_received' THEN cents WHEN 'refund' THEN -cents ELSE 0 END) FROM ledger WHERE order_id=o.id),0)",
       payout:
-        "o.labour+o.reimbursement-o.fee-COALESCE((SELECT sum(cents) FROM ledger WHERE order_id=o.id AND kind='payout'),0)",
+        "CASE WHEN EXISTS(SELECT 1 FROM test_card_payments WHERE order_id=o.id) THEN 0 ELSE o.labour+o.reimbursement-o.fee-COALESCE((SELECT sum(cents) FROM ledger WHERE order_id=o.id AND kind='payout'),0) END",
     };
     await sql(
       "INSERT OR IGNORE INTO ledger(order_id,kind,cents,ref,actor,reason) SELECT id,?,?,?,?,? FROM orders o WHERE id=? AND EXISTS(SELECT 1 FROM ledger WHERE order_id=o.id AND kind='accrual') AND NOT EXISTS(SELECT 1 FROM events WHERE order_id=o.id AND kind='disputed') AND (?<>'payout' OR model='online') AND ?<=(" +
@@ -181,7 +200,7 @@ export async function finance(path, post, b, user, sql, db, json, url, requireTe
     const where = parts.length ? " WHERE " + parts.join(" AND ") : "";
     const rows = (
       await sql(
-        "SELECT o.*,EXISTS(SELECT 1 FROM events WHERE order_id=o.id AND kind='completion_confirmed') completed,EXISTS(SELECT 1 FROM events WHERE order_id=o.id AND kind='disputed') disputed FROM orders o" +
+        "SELECT o.*,(SELECT CASE WHEN status='reserved' AND expires<=unixepoch() THEN 'expired' ELSE status END FROM test_card_payments WHERE order_id=o.id) card_status,(o.end < (unixepoch()-86400)*1000) review_overdue,EXISTS(SELECT 1 FROM events WHERE order_id=o.id AND kind='completion_confirmed') completed,EXISTS(SELECT 1 FROM events WHERE order_id=o.id AND kind='disputed') disputed FROM orders o" +
           where +
           " ORDER BY o.id DESC",
         ...args,

@@ -176,6 +176,11 @@ const walletCopy = {
   en: ["Test balance", "Amount in euros", "Add test credits", "Simulate withdrawal", "Pay from test balance", "Test payment complete", ["Top-up", "Payment", "Earnings", "Refund", "Withdrawal"], "Insufficient test balance.", "Pay for the order before confirming."],
   ru: ["Тестовый баланс", "Сумма в евро", "Пополнить тестовый баланс", "Имитировать вывод", "Оплатить с тестового баланса", "Тестовая оплата прошла", ["Пополнение", "Оплата", "Начисление", "Возврат", "Вывод"], "Недостаточно тестовых средств.", "Оплатите заказ перед подтверждением."],
 };
+const cardCopy = {
+  fi: ["Varaa testikortilta", "Katevaraus tehty", "Testimaksu veloitettu", "Katevaraus vapautettu", "Katevaraus vanhentunut", "Varaus avautuu 6 päivää ennen työn päättymistä", "Asiakkaan kokonaishinta", "Merkitse työ tehdyksi", "Vahvista työn valmistuminen", "Ilmoita ongelmasta"],
+  en: ["Reserve on test card", "Card hold active", "Test payment captured", "Card hold released", "Card hold expired", "Reservation opens 6 days before the job ends", "Customer total", "Mark work complete", "Confirm work completed", "Report a problem"],
+  ru: ["Зарезервировать на тестовой карте", "Сумма зарезервирована", "Тестовая оплата списана", "Резерв снят", "Срок резерва истёк", "Резерв доступен за 6 дней до окончания работы", "Итого для заказчика", "Отметить работу выполненной", "Работа выполнена", "Сообщить о проблеме"],
+};
 const walletKinds = ["topup", "payment", "earning", "refund", "withdrawal"];
 function walletPanel() {
   const copy = walletCopy[locale];
@@ -386,7 +391,10 @@ async function refreshUnread() {
   if (!badge) return;
   const inbox = await api("inbox");
   if (!badge.isConnected) return;
-  const summary = t(64) + " · " + inbox.unread;
+  const earnings = (inbox.earnings ?? []).slice(0, 3).map(({order_id, cents}) =>
+    walletCopy[locale][6][2] + " #" + order_id + " · " +
+    new Intl.NumberFormat(locale, {style: "currency", currency: "EUR"}).format(cents / 100));
+  const summary = [t(64) + " · " + inbox.unread, ...earnings].join(" · ");
   if (badge.textContent !== summary) badge.textContent = summary;
 }
 async function orders() {
@@ -418,24 +426,50 @@ async function orders() {
         style: "currency",
         currency: "EUR",
       }).format(cents / 100);
+    const card = cardCopy[locale];
+    const buyer = row.customer === me.id;
+    const needsPayment = row.model === "online" && row.labour + row.reimbursement > 0;
+    const disputed = row.confirmations.some(c => c.answer === "dispute");
+    const helperDone = row.confirmations.some(c =>
+      c.actor === row.provider && c.topic === "completion" && c.answer === "yes");
+    const alreadyAnswered = row.confirmations.some(c => c.actor === me.id && c.topic === "completion");
+    const gross = row.labour + row.reimbursement;
     const amounts = document.createElement("p");
     amounts.textContent = [
       t(45) + " · " + amount(row.labour),
       t(46) + " · " + amount(row.reimbursement),
       t(30) + " · " + row.percent + "% (" + amount(row.fee) + ")",
-      t(65) + " · " + amount(row.labour + row.reimbursement - row.fee),
+      ...(needsPayment && !row.wallet_paid ? [card[6] + " · " + amount(gross + row.fee)] : []),
+      t(65) + " · " + amount(row.wallet_paid || !needsPayment ? gross - row.fee : gross),
     ].join(" / ");
     li.append(amounts);
-    if (row.wallet_paid && !row.cancelled) {
-      const paid = document.createElement("p");
-      paid.textContent = walletCopy[locale][5];
-      li.append(paid);
-    } else if (row.customer === me.id && row.provider && !row.cancelled &&
-        row.model === "online" && row.labour + row.reimbursement > 0 && !row.confirmations.length) {
-      const pay = document.createElement("button");
-      pay.dataset.walletPay = row.id;
-      pay.textContent = walletCopy[locale][4];
-      li.append(pay);
+    if (row.card_status || (row.wallet_paid && !row.cancelled)) {
+      const payment = document.createElement("p");
+      const index = ["reserved", "captured", "released", "expired"].indexOf(row.card_status);
+      payment.textContent = index < 0 ? walletCopy[locale][5] : card[index + 1];
+      li.append(payment);
+    }
+    if (buyer && row.provider && !row.cancelled && needsPayment && !row.wallet_paid &&
+        !disputed && (!row.card_status || row.card_status === "expired")) {
+      const actions = document.createElement("div");
+      actions.className = "actions";
+      if (row.end <= Date.now() + 518400000) {
+        const reserve = document.createElement("button");
+        reserve.dataset.cardReserve = row.id;
+        reserve.textContent = card[0] + " · " + amount(gross + row.fee);
+        actions.append(reserve);
+      } else {
+        const wait = document.createElement("p");
+        wait.textContent = card[5];
+        li.append(wait);
+      }
+      if (!row.card_status && !row.confirmations.length) {
+        const pay = document.createElement("button");
+        pay.dataset.walletPay = row.id;
+        pay.textContent = walletCopy[locale][4] + " · " + amount(gross);
+        actions.append(pay);
+      }
+      li.append(actions);
     }
     if (row.customer === me.id && !row.cancelled &&
         row.confirmations.filter(c => c.topic === "completion" && c.answer === "yes").length === 2 &&
@@ -496,7 +530,7 @@ async function orders() {
       view.dataset.view = row.id;
       li.append(view, b);
     }
-    if (!row.cancelled && (row.customer === me.id || row.provider === me.id)) {
+    if (!row.cancelled && !row.confirmations.length && (buyer || row.provider === me.id)) {
       const cancel = document.createElement("button");
       cancel.textContent = t(62);
       cancel.dataset.cancel = row.id;
@@ -508,12 +542,13 @@ async function orders() {
       (row.customer === me.id || row.provider === me.id)
     ) {
       for (const k of [
-        42,
+        ...(!alreadyAnswered && !disputed && (!needsPayment || row.wallet_paid ||
+          (row.card_status === "reserved" && (!buyer || helperDone))) ? [42] : []),
         ...(["cash", "split"].includes(row.model) ? [43] : []),
-        44,
+        ...(!alreadyAnswered && !disputed && row.card_status !== "captured" ? [44] : []),
       ]) {
         const btn = document.createElement("button");
-        btn.textContent = t(k);
+        btn.textContent = k === 42 ? card[buyer ? 8 : 7] : k === 44 ? card[9] : t(k);
         btn.dataset.confirm = row.id;
         btn.dataset.key = k;
         li.append(btn);
@@ -562,6 +597,7 @@ el("app").onclick = async (e) => {
         e.target.disabled = false;
       }
     }
+    if (e.target.dataset.cardReserve) await api("payment/reserve", { id: Number(e.target.dataset.cardReserve) });
     if (e.target.dataset.walletPay) await api("wallet/pay", { id: Number(e.target.dataset.walletPay) });
     if (e.target.dataset.rateOrder) {
       const id = Number(e.target.dataset.rateOrder);

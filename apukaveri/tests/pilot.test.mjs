@@ -154,4 +154,64 @@ test("closed pilot protects routes and supports orders in both owner roles", asy
   assert.equal(report.orders.filter(order => order.completed).length, 2);
   assert.equal(report.totals.accrual, 1200);
   assert.equal(report.totals.payout, undefined);
+
+  async function acceptedOrder(offset) {
+    const start = base + offset * 3600000;
+    const booking = await helper.send("orders", {
+      kind: "planned", target: 1, city: "Kitee", category: 3,
+      start, end: start + 3600000, labour: 4000,
+    });
+    assert.equal(booking.status, 201);
+    const { id } = await booking.json();
+    assert.equal((await owner.send("claim", { id })).status, 200);
+    return id;
+  }
+  const confirm = (actor, id, answer = "yes") =>
+    actor.send("confirm", { id, topic: "completion", answer });
+  const status = async id => (await (await helper.send("orders")).json())
+    .find(order => order.id === id).card_status;
+  const direct = await acceptedOrder(6);
+  assert.equal((await customer.send("payment/reserve", { id: direct })).status, 409);
+  const reserves = await Promise.all([1, 2].map(() => helper.send("payment/reserve", { id: direct })));
+  assert.ok(reserves.every(response => response.status === 200));
+  const reserved = await env.DB.prepare("SELECT cents FROM test_card_payments WHERE order_id=?")
+    .bind(direct).first();
+  assert.equal(reserved.cents, 4600);
+  assert.equal(await status(direct), "reserved");
+  assert.equal(await balance(helper), 2400);
+  assert.equal((await helper.send("wallet/pay", { id: direct })).status, 409);
+  assert.equal((await confirm(helper, direct)).status, 409);
+  assert.equal((await confirm(owner, direct)).status, 200);
+  assert.equal(await balance(owner), 3400);
+  await env.DB.prepare("UPDATE test_card_payments SET expires=0 WHERE order_id=?").bind(direct).run();
+  assert.equal(await status(direct), "expired");
+  assert.equal((await confirm(helper, direct)).status, 409);
+  assert.equal((await helper.send("payment/reserve", { id: direct })).status, 200);
+  const completions = await Promise.all([1, 2].map(() => confirm(helper, direct)));
+  assert.ok(completions.every(response => response.status === 200));
+  assert.equal(await status(direct), "captured");
+  assert.equal(await balance(owner), 7400);
+  assert.equal((await helper.send("rating", { id: direct, stars: 5 })).status, 201);
+  const earnings = (await (await owner.send("inbox")).json()).earnings;
+  assert.deepEqual(earnings.filter(entry => entry.order_id === direct), [{ order_id: direct, cents: 4000 }]);
+
+  const cancelled = await acceptedOrder(8);
+  assert.equal((await helper.send("payment/reserve", { id: cancelled })).status, 200);
+  assert.equal((await helper.send("cancel", { id: cancelled })).status, 200);
+  assert.equal(await status(cancelled), "released");
+
+  const disputed = await acceptedOrder(10);
+  assert.equal((await helper.send("payment/reserve", { id: disputed })).status, 200);
+  assert.equal((await confirm(owner, disputed)).status, 200);
+  assert.equal((await confirm(helper, disputed, "dispute")).status, 200);
+  assert.equal((await confirm(helper, disputed)).status, 409);
+  assert.equal((await helper.send("admin/release-test-payment", { id: disputed })).status, 403);
+  assert.equal(await status(disputed), "reserved");
+  assert.equal((await owner.send("admin/release-test-payment", { id: disputed })).status, 200);
+  assert.equal(await status(disputed), "released");
+  assert.equal(await balance(owner), 7400);
+
+  const future = await acceptedOrder(24 * 8);
+  assert.equal((await helper.send("payment/reserve", { id: future })).status, 409);
+
 });
