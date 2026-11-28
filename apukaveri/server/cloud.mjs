@@ -1,12 +1,24 @@
 import worker from "./worker.mjs";
-import { hasPilotAccess } from "./access.mjs";
+import { pilotIdentity } from "./access.mjs";
 
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const local = ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
     const pilot = env.MODE === "closed-pilot";
-    if (pilot ? !(await hasPilotAccess(request, env)) : !local || env.MODE !== "synthetic") {
+    const identity = pilot && await pilotIdentity(request, env);
+    const accessRequired = pilot && env.PILOT_ROLE_EMAILS !== undefined;
+    let role;
+    if (accessRequired && identity) {
+      try {
+        const emails = JSON.parse(env.PILOT_ROLE_EMAILS);
+        if (emails.customer === identity && emails.helper !== identity) role = "customer";
+        if (emails.helper === identity && emails.customer !== identity) role = "helper";
+      } catch {
+        // An invalid role mapping leaves the private pilot closed.
+      }
+    }
+    if (pilot ? !identity || (accessRequired && !role) : !local || env.MODE !== "synthetic") {
       return new Response("Access required", { status: 403, headers: { "Cache-Control": "no-store" } });
     }
 
@@ -14,10 +26,12 @@ export default {
       MODE: "synthetic",
       DB: env.DB,
       requireTestPayment: pilot,
+      pilotAccount: role ? { email: identity, role } : undefined,
       deliver: !pilot ? (email, purpose, code) =>
         console.log("TEST MAIL", email, purpose, code) : undefined,
     };
-    if (pilot && ["/api/register", "/api/recover", "/api/verify", "/api/reset"].includes(url.pathname)) {
+    if (pilot && (["/api/recover", "/api/verify", "/api/reset"].includes(url.pathname) ||
+        (!role && url.pathname === "/api/register") || (role && url.pathname === "/api/login"))) {
       return Response.json({ error: "Use a provisioned pilot account" }, {
         status: 404,
         headers: { "Cache-Control": "no-store" },

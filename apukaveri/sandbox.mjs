@@ -122,7 +122,8 @@ let locale = localStorage.getItem(key) || "fi",
   me = null,
   cats = [],
   locations = [],
-  repeatTarget = null;
+  repeatTarget = null,
+  pilotRole = null;
 if (!langs.includes(locale)) locale = "fi";
 const t = (i) => words[i][langs.indexOf(locale)],
   el = (id) => document.getElementById(id);
@@ -210,6 +211,11 @@ async function refreshWallet() {
     return row;
   }));
 }
+const pilotRegistration = {
+  fi: ["Luo tilaajan testitili", "Luo tekijän testitili"],
+  en: ["Create a customer test account", "Create a helper test account"],
+  ru: ["Зарегистрироваться как заказчик", "Зарегистрироваться как исполнитель"],
+};
 function render() {
   repeatTarget = null;
   document.documentElement.lang = locale;
@@ -220,9 +226,15 @@ function render() {
   if (!pilot) html += '<a href="/">' + t(27) + "</a> ";
   if (me?.owner) html += ownerLink;
   const [findHelp, offerHelp, orderMunicipality] = roleCopy[locale];
-  if (me) html += '<div class="actions"><a href="#customerOrders">' + findHelp +
-    '</a><a href="#providerProfile">' + offerHelp + '</a></div>';
-  if (!me)
+  if (me) html += '<div class="actions">' +
+    (me.pilot_role !== "helper" ? '<a href="#customerOrders">' + findHelp + '</a>' : "") +
+    (me.pilot_role !== "customer" ? '<a href="#providerProfile">' + offerHelp + '</a>' : "") +
+    '</div>';
+  if (!me && pilotRole) {
+    const title = pilotRegistration[locale][pilotRole === "helper" ? 1 : 0];
+    html += '<article><h2>' + title + '</h2>' + registrationTerms() +
+      '<button data-action="6">' + title + '</button></article>';
+  } else if (!me)
     html +=
       "<article><h2>" +
       t(1) +
@@ -241,7 +253,7 @@ function render() {
       "</div></article>";
   else
     html += walletPanel() +
-      '<article id="providerProfile"><h2>' +
+      '<article id="providerProfile"' + (me.pilot_role === 'customer' ? ' hidden' : '') + '><h2>' +
       t(12) +
       " · " +
       me.id +
@@ -271,7 +283,7 @@ function render() {
       button(52) +
       '</article><article id="customerOrders"><h2>' +
       t(17) +
-      '</h2><label><span id="orderMunicipalityLabel">' + orderMunicipality + '</span><select id="orderMunicipality" required></select></label>' +
+      '</h2><div' + (me.pilot_role === 'helper' ? ' hidden' : '') + '><label><span id="orderMunicipalityLabel">' + orderMunicipality + '</span><select id="orderMunicipality" required></select></label>' +
       field(13, '<select id="orderCity" required></select>') +
       field(14, '<select id="orderCategory"></select>') +
       field(45, '<input type="number" id="labour" min="0" value="0">') +
@@ -309,9 +321,9 @@ function render() {
       button(31) +
       button(38) +
       button(18) +
-      '</div><div class="actions">' + button(19) +
+      '</div></div><div class="actions">' + button(19) +
       '<span id="unread" role="status" aria-live="polite" aria-atomic="true"></span></div><ul id="orders"></ul></article>' +
-      button(21);
+      (pilotRole ? '<a href="/cdn-cgi/access/logout">' + t(21) + "</a>" : button(21));
   el("app").innerHTML = html;
   if (me) {
     el("orderDate").value = helsinkiDate(Date.now() + 86400000);
@@ -688,6 +700,12 @@ el("app").onclick = async (e) => {
       el("status").textContent = registrationCopy[locale].missing;
       return;
     }
+    if (i === 6 && pilotRole) {
+      await api("register", { termsVersion, privacyVersion, locale });
+      await refresh();
+      el("status").textContent = t(22);
+      return;
+    }
     if ([6, 7, 10].includes(i))
       await api({ 6: "register", 7: "login", 10: "recover" }[i], {
         email: val("email"),
@@ -803,6 +821,10 @@ el("app").onclick = async (e) => {
 };
 render();
 try {
+  if (location.protocol === "https:") {
+    pilotRole = (await api("pilot-role")).role;
+    render();
+  }
   await refresh();
 } catch {}
 

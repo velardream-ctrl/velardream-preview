@@ -25,7 +25,7 @@ async function signingKeys(issuer) {
   }
 }
 
-export async function hasPilotAccess(request, env) {
+export async function pilotIdentity(request, env) {
   const url = new URL(request.url);
   const issuer = env.ACCESS_ISSUER;
   const audience = env.ACCESS_AUDIENCE;
@@ -55,7 +55,8 @@ export async function hasPilotAccess(request, env) {
     if (!jwk) return false;
     const algorithm = { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" };
     const key = await crypto.subtle.importKey("jwk", jwk, algorithm, false, ["verify"]);
-    return await crypto.subtle.verify(algorithm, key, decode(signature), bytes.encode(headerPart + "." + claimsPart));
+    const valid = await crypto.subtle.verify(algorithm, key, decode(signature), bytes.encode(headerPart + "." + claimsPart));
+    return valid ? claims.email.trim().toLowerCase() : false;
   } catch {
     return false;
   }

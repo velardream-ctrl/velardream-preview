@@ -111,11 +111,31 @@ export default {
           .get("Cookie")
           ?.match(/(?:^|; )ak_session=([a-f0-9-]+)/)?.[1] || "";
       const session = await digest(secret);
-      const user = await sql(
-        "SELECT a.id,a.owner FROM accounts a JOIN tokens t ON a.id=t.user WHERE t.hash=? AND purpose='session' AND expires>?",
-        session,
-        now,
-      ).first();
+      const pilot = env.pilotAccount;
+      const user = pilot
+        ? await sql("SELECT id,owner,pilot_role FROM accounts WHERE email=? AND pilot_role=?", pilot.email, pilot.role).first()
+        : await sql(
+          "SELECT a.id,a.owner FROM accounts a JOIN tokens t ON a.id=t.user WHERE t.hash=? AND purpose='session' AND expires>? AND a.pilot_role IS NULL",
+          session,
+          now,
+        ).first();
+      if (path === "/api/pilot-role" && !post) return json({ role: pilot?.role ?? null });
+      if (pilot && path === "/api/register" && post) {
+        if (b.termsVersion !== termsVersion || b.privacyVersion !== privacyVersion ||
+            typeof b.locale !== "string" || !Object.hasOwn(registrationCopy, b.locale)) {
+          return json({ error: "Current terms and privacy acknowledgement required" }, 400);
+        }
+        await env.DB.batch([
+          sql("INSERT INTO accounts(email,password,verified,pilot_role) VALUES(?,?,1,?) ON CONFLICT(email) DO NOTHING",
+            pilot.email, crypto.randomUUID(), pilot.role),
+          sql("INSERT INTO profiles(user,alias) SELECT id,'Demo '||id FROM accounts WHERE email=? AND pilot_role=? ON CONFLICT(user) DO NOTHING",
+            pilot.email, pilot.role),
+          sql("INSERT INTO registration_terms(account_id,terms_version,privacy_version,language) SELECT id,?,?,? FROM accounts WHERE email=? AND pilot_role=? ON CONFLICT(account_id) DO NOTHING",
+            termsVersion, privacyVersion, b.locale, pilot.email, pilot.role),
+        ]);
+        const account = await sql("SELECT pilot_role FROM accounts WHERE email=?", pilot.email).first();
+        return json({}, account?.pilot_role === pilot.role ? 201 : 409);
+      }
       async function issue(id, purpose, ttl) {
         const code = crypto.randomUUID();
         await sql(
@@ -256,6 +276,9 @@ export default {
         return json({}, result[0].meta.changes ? 200 : 400);
       }
       if (!user) return json({}, 401);
+      if (post && ((user.pilot_role === "customer" && ["/api/profile", "/api/claim"].includes(path)) ||
+          (user.pilot_role === "helper" && path === "/api/orders")))
+        return json({}, 403);
       await sql(
         "INSERT INTO activity VALUES(?,?) ON CONFLICT(user) DO UPDATE SET last_seen=excluded.last_seen WHERE activity.last_seen<excluded.last_seen-60000",
         user.id,

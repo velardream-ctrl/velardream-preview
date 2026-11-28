@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import cloud from "../server/cloud.mjs";
 import { database } from "../server/local.mjs";
+import { termsVersion, privacyVersion } from "../registration-terms.mjs";
 import { password } from "../server/worker.mjs";
 
 test("closed pilot protects routes and supports orders in both owner roles", async (t) => {
@@ -213,5 +214,46 @@ test("closed pilot protects routes and supports orders in both owner roles", asy
 
   const future = await acceptedOrder(24 * 8);
   assert.equal((await helper.send("payment/reserve", { id: future })).status, 409);
+
+
+  env.PILOT_ROLE_EMAILS = JSON.stringify({ customer: "buyer@example.com", helper: "helper@example.com" });
+  assert.equal((await request("/", valid)).status, 403);
+  const buyerToken = await token({ email: "BUYER@example.com" });
+  const helperToken = await token({ email: "helper@example.com" });
+  const buyerRequest = (path, body) => request("/api/" + path, buyerToken, {body, cookie: owner.cookie});
+  const helperRequest = (path, body) => request("/api/" + path, helperToken, {body});
+  assert.deepEqual(await (await buyerRequest("pilot-role")).json(), {role: "customer"});
+  assert.equal((await buyerRequest("me")).status, 401);
+  assert.equal((await buyerRequest("register", {})).status, 400);
+  const acknowledgement = {termsVersion, privacyVersion, locale: "ru"};
+  assert.equal((await buyerRequest("register", {...acknowledgement, role: "helper", email: helperEmail})).status, 201);
+  assert.equal((await buyerRequest("register", acknowledgement)).status, 201);
+  assert.equal((await helperRequest("register", acknowledgement)).status, 201);
+  const buyerAccount = await (await buyerRequest("me")).json();
+  const helperAccount = await (await helperRequest("me")).json();
+  assert.equal(buyerAccount.pilot_role, "customer");
+  assert.equal(buyerAccount.owner, 0);
+  assert.equal(helperAccount.pilot_role, "helper");
+  assert.notEqual(buyerAccount.id, helperAccount.id);
+  assert.equal((await buyerRequest("admin/report")).status, 403);
+  assert.equal((await buyerRequest("profile", {})).status, 403);
+  assert.equal((await buyerRequest("claim", {})).status, 403);
+  assert.equal((await helperRequest("orders", {})).status, 403);
+  assert.equal((await helperRequest("profile", {
+    alias: "Demo " + helperAccount.id, city: "Kitee", category: 3, schedule, available: true,
+  })).status, 200);
+  const pilotStart = base + 12 * 3600000;
+  const pilotOrder = await buyerRequest("orders", {
+    kind: "planned", target: helperAccount.id, city: "Kitee", category: 3,
+    start: pilotStart, end: pilotStart + 3600000, labour: 4000,
+  });
+  assert.equal(pilotOrder.status, 201);
+  const created = await pilotOrder.json();
+  assert.equal((await helperRequest("claim", { id: created.id })).status, 200);
+  assert.equal((await buyerRequest("payment/reserve", { id: created.id })).status, 200);
+  const confirmation = { id: created.id, topic: "completion", answer: "yes" };
+  assert.equal((await helperRequest("confirm", confirmation)).status, 200);
+  assert.equal((await buyerRequest("confirm", confirmation)).status, 200);
+  assert.equal((await buyerRequest("rating", { id: created.id, stars: 5 })).status, 201);
 
 });
