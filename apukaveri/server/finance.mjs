@@ -1,5 +1,5 @@
 // Owner-only reporting, synthetic adjustments and independent party attestations.
-export async function finance(path, post, b, user, sql, db, json, url) {
+export async function finance(path, post, b, user, sql, db, json, url, requireTestPayment) {
   if (path === "/api/confirm" && post) {
     if (
       !["completion", "cash"].includes(b.topic) ||
@@ -13,6 +13,11 @@ export async function finance(path, post, b, user, sql, db, json, url) {
       user.id,
     ).first();
     if (!order) return json({}, 403);
+    if (requireTestPayment && b.topic === "completion" && b.answer === "yes" &&
+        order.model === "online" && order.labour + order.reimbursement > 0 &&
+        !(await sql("SELECT 1 AS paid FROM test_wallet_entries WHERE ref=?", "payment-" + order.id).first())) {
+      return json({ error: "test_payment_required" }, 409);
+    }
     if (b.topic === "cash" && !["cash", "split"].includes(order.model))
       return json({}, 400);
     await sql(

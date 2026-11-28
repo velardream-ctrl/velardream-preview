@@ -90,6 +90,13 @@ test("closed pilot protects routes and supports orders in both owner roles", asy
     assert.equal(saved.status, 200);
   }
 
+  const balance = async actor => (await (await actor.send("wallet")).json()).balance;
+  for (const actor of [owner, customer]) {
+    const topup = { cents: 4000, ref: crypto.randomUUID() };
+    assert.equal((await actor.send("wallet/topup", topup)).status, 200);
+    assert.equal((await actor.send("wallet/topup", topup)).status, 200);
+    assert.equal(await balance(actor), 4000);
+  }
   const base = Math.ceil(Date.now() / 60000) * 60000 + 3600000;
   for (const [index, [buyer, provider, target, outsider]] of [
     [owner, helper, 3, customer],
@@ -111,13 +118,38 @@ test("closed pilot protects routes and supports orders in both owner roles", asy
     assert.equal((await provider.send("claim", { id })).status, 200);
     assert.equal((await buyer.send("orders", details)).status, 409);
     assert.equal((await buyer.send("rating", { id, stars: 5 })).status, 403);
+    assert.equal((await buyer.send("confirm", { id, topic: "completion", answer: "yes" })).status, 409);
+    assert.equal((await outsider.send("wallet/pay", { id })).status, 409);
+    assert.equal((await buyer.send("wallet/pay", { id })).status, 200);
+    assert.equal((await buyer.send("wallet/pay", { id })).status, 200);
+    assert.equal(await balance(buyer), 0);
+    assert.equal(await balance(provider), 0);
     for (const actor of [provider, buyer]) {
       assert.equal((await actor.send("confirm", {
         id, topic: "completion", answer: "yes",
       })).status, 200);
     }
     assert.equal((await buyer.send("rating", { id, stars: 5 })).status, 201);
+    const wallet = await (await provider.send("wallet")).json();
+    assert.equal(wallet.balance, 3400);
+    assert.equal(wallet.entries.filter(entry => entry.kind === "earning" && entry.order_id === id).length, 1);
   }
+  const payout = { cents: 1000, ref: crypto.randomUUID() };
+  assert.equal((await helper.send("wallet/withdraw", payout)).status, 200);
+  assert.equal((await helper.send("wallet/withdraw", payout)).status, 200);
+  assert.equal(await balance(helper), 2400);
+  assert.equal((await helper.send("wallet/withdraw", { cents: 2500, ref: crypto.randomUUID() })).status, 409);
+
+  const start = base + 14400000;
+  const next = await (await helper.send("orders", {
+    kind: "planned", target: 1, city: "Kitee", category: 3,
+    start, end: start + 3600000, labour: 1000,
+  })).json();
+  assert.equal((await owner.send("claim", { id: next.id })).status, 200);
+  assert.equal((await helper.send("wallet/pay", { id: next.id })).status, 200);
+  assert.equal(await balance(helper), 1400);
+  assert.equal((await owner.send("cancel", { id: next.id })).status, 200);
+  assert.equal(await balance(helper), 2400);
   const report = await (await owner.send("admin/report")).json();
   assert.equal(report.orders.filter(order => order.completed).length, 2);
   assert.equal(report.totals.accrual, 1200);

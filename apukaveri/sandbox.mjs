@@ -140,6 +140,8 @@ async function api(name, data) {
   );
   if (!r.ok) {
     const detail = await r.json().catch(() => null);
+    if (detail?.error === "test_wallet_insufficient") throw Error(walletCopy[locale][7]);
+    if (detail?.error === "test_payment_required") throw Error(walletCopy[locale][8]);
     if (detail?.error === "helper_unavailable") throw Error({
       fi: "Tekijä ei ole vapaa koko valituksi ajaksi.",
       ru: "Исполнитель недоступен на весь выбранный период.",
@@ -168,6 +170,39 @@ function registrationTerms() {
     copy.privacy + '</p></details>' +
     '<label><span>' + copy.accept + '</span><input type="checkbox" id="acceptTerms"></label>' +
     '<label><span>' + copy.acknowledge + '</span><input type="checkbox" id="ackPrivacy"></label></fieldset>';
+}
+const walletCopy = {
+  fi: ["Testisaldo", "Summa euroina", "Lisää testirahaa", "Simuloi nosto", "Maksa testisaldolla", "Testimaksu suoritettu", ["Lisäys", "Maksu", "Ansio", "Palautus", "Nosto"], "Testisaldo ei riitä.", "Maksa tilaus ennen vahvistusta."],
+  en: ["Test balance", "Amount in euros", "Add test credits", "Simulate withdrawal", "Pay from test balance", "Test payment complete", ["Top-up", "Payment", "Earnings", "Refund", "Withdrawal"], "Insufficient test balance.", "Pay for the order before confirming."],
+  ru: ["Тестовый баланс", "Сумма в евро", "Пополнить тестовый баланс", "Имитировать вывод", "Оплатить с тестового баланса", "Тестовая оплата прошла", ["Пополнение", "Оплата", "Начисление", "Возврат", "Вывод"], "Недостаточно тестовых средств.", "Оплатите заказ перед подтверждением."],
+};
+const walletKinds = ["topup", "payment", "earning", "refund", "withdrawal"];
+function walletPanel() {
+  const copy = walletCopy[locale];
+  return '<article id="walletPanel"><h2>' + copy[0] + '</h2><p id="walletBalance" role="status"></p>' +
+    '<label>' + copy[1] + '<input id="walletAmount" type="number" min="0.01" max="1000" step="0.01" value="40"></label>' +
+    '<div class="actions"><button data-wallet="topup">' + copy[2] +
+    '</button><button data-wallet="withdraw">' + copy[3] +
+    '</button></div><ul id="walletHistory" aria-live="polite"></ul></article>';
+}
+async function refreshWallet() {
+  const balance = el("walletBalance");
+  const history = el("walletHistory");
+  if (!balance || !history) return;
+  const wallet = await api("wallet");
+  if (!balance.isConnected) return;
+  const amount = cents => new Intl.NumberFormat(locale, {style:"currency", currency:"EUR"}).format(cents / 100);
+  const formatted = amount(wallet.balance);
+  if (balance.textContent !== formatted) balance.textContent = formatted;
+  const rows = wallet.entries.map(entry => walletCopy[locale][6][walletKinds.indexOf(entry.kind)] +
+    " · " + amount(entry.cents) + (entry.order_id ? " · #" + entry.order_id : ""));
+  if (JSON.stringify(rows) === history.dataset.entries) return;
+  history.dataset.entries = JSON.stringify(rows);
+  history.replaceChildren(...rows.map(text => {
+    const row = document.createElement("li");
+    row.textContent = text;
+    return row;
+  }));
 }
 function render() {
   document.documentElement.lang = locale;
@@ -198,7 +233,7 @@ function render() {
           '<div class="actions">' + button(9) + button(10) + button(11)) +
       "</div></article>";
   else
-    html +=
+    html += walletPanel() +
       '<article id="providerProfile"><h2>' +
       t(12) +
       " · " +
@@ -358,7 +393,7 @@ async function orders() {
   const ul = el("orders");
   if (!ul) return;
   const rows = await api("orders");
-  await refreshUnread();
+  await Promise.all([refreshUnread(), refreshWallet()]);
   if (!ul.isConnected) return;
   ul.replaceChildren();
   if (!rows.length) ul.textContent = t(26);
@@ -391,6 +426,17 @@ async function orders() {
       t(65) + " · " + amount(row.labour + row.reimbursement - row.fee),
     ].join(" / ");
     li.append(amounts);
+    if (row.wallet_paid && !row.cancelled) {
+      const paid = document.createElement("p");
+      paid.textContent = walletCopy[locale][5];
+      li.append(paid);
+    } else if (row.customer === me.id && row.provider && !row.cancelled &&
+        row.model === "online" && row.labour + row.reimbursement > 0 && !row.confirmations.length) {
+      const pay = document.createElement("button");
+      pay.dataset.walletPay = row.id;
+      pay.textContent = walletCopy[locale][4];
+      li.append(pay);
+    }
     if (row.customer === me.id && !row.cancelled &&
         row.confirmations.filter(c => c.topic === "completion" && c.answer === "yes").length === 2 &&
         !row.confirmations.some(c => c.answer === "dispute")) {
@@ -503,6 +549,20 @@ el("app").onclick = async (e) => {
   const i = Number(e.target.dataset.action),
     val = (id) => el(id).value;
   try {
+    if (e.target.dataset.wallet) {
+      const amount = el("walletAmount");
+      if (!amount.reportValidity() || !amount.value) return;
+      e.target.disabled = true;
+      try {
+        await api("wallet/" + e.target.dataset.wallet, {
+          cents: Math.round(amount.valueAsNumber * 100),
+          ref: crypto.randomUUID(),
+        });
+      } finally {
+        e.target.disabled = false;
+      }
+    }
+    if (e.target.dataset.walletPay) await api("wallet/pay", { id: Number(e.target.dataset.walletPay) });
     if (e.target.dataset.rateOrder) {
       const id = Number(e.target.dataset.rateOrder);
       await api("rating", { id, stars: Number(val("stars-" + id)) });
@@ -642,7 +702,7 @@ if (location.protocol !== "https:" && "serviceWorker" in navigator)
   navigator.serviceWorker.register("./sw.js").catch(() => {});
 
 function pollUnread() {
-  if (me && !document.hidden) refreshUnread().catch(() => {});
+  if (me && !document.hidden) Promise.allSettled([refreshUnread(), refreshWallet()]);
 }
 document.addEventListener("visibilitychange", pollUnread);
 setInterval(pollUnread, 30000);

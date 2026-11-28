@@ -13,6 +13,7 @@ export default {
     const serverEnv = {
       MODE: "synthetic",
       DB: env.DB,
+      requireTestPayment: pilot,
       deliver: !pilot ? (email, purpose, code) =>
         console.log("TEST MAIL", email, purpose, code) : undefined,
     };

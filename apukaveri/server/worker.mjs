@@ -1,3 +1,4 @@
+import { testWallet } from "./test-wallet.mjs";
 import { termsVersion, privacyVersion, registrationCopy } from "../registration-terms.mjs";
 import { validLanguages } from "../profile-languages.mjs";
 import { finance } from "./finance.mjs";
@@ -282,6 +283,8 @@ export default {
         else return json({}, 400);
         return json({ ok: true });
       }
+      const wallet = await testWallet(path, post, b, user, sql, json);
+      if (wallet) return wallet;
       const financial = await finance(
         path,
         post,
@@ -291,6 +294,7 @@ export default {
         env.DB,
         json,
         url,
+        env.requireTestPayment,
       );
       if (financial) return financial;
       if (path === "/api/logout" && post) {
@@ -407,7 +411,7 @@ export default {
       if (path === "/api/orders" && !post) {
         const rows = (
           await sql(
-            "SELECT orders.*,(SELECT stars FROM ratings WHERE order_id=orders.id) AS stars FROM orders WHERE customer=? OR provider=? OR (cancelled=0 AND customer<>? AND provider IS NULL AND (target IS NULL OR target=?) AND " +
+            "SELECT orders.*,(SELECT stars FROM ratings WHERE order_id=orders.id) AS stars,EXISTS(SELECT 1 FROM test_wallet_entries WHERE ref='payment-'||orders.id) AS wallet_paid FROM orders WHERE customer=? OR provider=? OR (cancelled=0 AND customer<>? AND provider IS NULL AND (target IS NULL OR target=?) AND " +
               audience +
               " AND EXISTS(SELECT 1 FROM profiles p WHERE p.user=? AND p.available=1 AND p.city=orders.city AND p.category=orders.category))",
             user.id,
@@ -719,6 +723,8 @@ export default {
       }
       return json({}, 404);
     } catch (e) {
+      if (/test_wallet_insufficient/.test(String(e.cause || e)))
+        return json({ error: "test_wallet_insufficient" }, 409);
       if (/occupied|UNIQUE constraint/.test(String(e.cause || e)))
         return json({}, 409);
       return json({ error: "Request failed" }, e.status || 500);
